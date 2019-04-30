@@ -11,13 +11,13 @@ use tokio_buf::{BufStream, SizeHint};
 /// Trait representing a streaming body of a Request or Response.
 pub trait Body {
     /// Values yielded by the `Body`.
-    type Item: Buf;
+    type Data: Buf;
 
     /// The error type this `BufStream` might generate.
     type Error;
 
-    /// Attempt to pull out the next buffer of this stream, registering the
-    fn poll_buf(&mut self) -> Poll<Option<Self::Item>, Self::Error>;
+    /// Attempt to pull out the next data buffer of this stream.
+    fn poll_data(&mut self) -> Poll<Option<Self::Data>, Self::Error>;
 
     /// Returns the bounds on the remaining length of the stream.
     fn size_hint(&self) -> SizeHint {
@@ -29,7 +29,7 @@ pub trait Body {
 
     /// Returns `true` when the end of stream has been reached.
     ///
-    /// An end of stream means that both `poll_buf` and `poll_trailers` will
+    /// An end of stream means that both `poll_data` and `poll_trailers` will
     /// return `None`.
     ///
     /// A return value of `false` **does not** guarantee that a value will be
@@ -40,10 +40,10 @@ pub trait Body {
 }
 
 impl<T: BufStream> Body for T {
-    type Item = T::Item;
+    type Data = T::Item;
     type Error = T::Error;
 
-    fn poll_buf(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+    fn poll_data(&mut self) -> Poll<Option<Self::Data>, Self::Error> {
         BufStream::poll_buf(self)
     }
 
