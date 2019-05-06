@@ -1,3 +1,9 @@
+//! Asynchronous HTTP request or response body.
+//!
+//! See [`Body`] for more details.
+//!
+//! [`Body`]: trait.Body.html
+
 extern crate bytes;
 extern crate futures;
 extern crate http;
@@ -9,6 +15,24 @@ use http::HeaderMap;
 use tokio_buf::{BufStream, SizeHint};
 
 /// Trait representing a streaming body of a Request or Response.
+///
+/// Data is streamed via the `poll_data` function, which asynchronously yields `T: Buf` values. The
+/// `size_hint` function provides insight into the total number of bytes that will be streamed.
+///
+/// The `poll_trailers` function returns an optional set of trailers used to finalize the request /
+/// response exchange. This is mostly used when using the HTTP/2.0 protocol.
+///
+/// # Relation with [`BufStream`].
+///
+/// The `Body` trait is a superset of the `BufStream` trait. However, `BufStream` is not considered
+/// a super trait of `Body`. Instead, a `T: Body` can be thought of as containing a `BufStream` as
+/// well as the HTTP trailers.
+///
+/// There exists is a blanket implementation of `Body` for `T: BufStream`. In other words, any type
+/// that implements `BufStream` also implements `Body` yielding no trailers.
+///
+/// [`BufStream`]: https://docs.rs/tokio-buf/0.1.1/tokio_buf/trait.BufStream.html
+///
 pub trait Body {
     /// Values yielded by the `Body`.
     type Data: Buf;
@@ -20,11 +44,16 @@ pub trait Body {
     fn poll_data(&mut self) -> Poll<Option<Self::Data>, Self::Error>;
 
     /// Returns the bounds on the remaining length of the stream.
+    ///
+    /// When the **exact** remaining length of the stream is known, the upper bound will be set and
+    /// will equal the lower bound.
     fn size_hint(&self) -> SizeHint {
         SizeHint::default()
     }
 
     /// Poll for an optional **single** `HeaderMap` of trailers.
+    ///
+    /// This function should only be called once `poll_data` returns `None`.
     fn poll_trailers(&mut self) -> Poll<Option<HeaderMap>, Self::Error>;
 
     /// Returns `true` when the end of stream has been reached.
