@@ -1,7 +1,25 @@
 [package]
 name = "http-body"
+# When releasing to crates.io:
+# - Remove path dependencies
+# - Update html_root_url.
+# - Update doc url
+#   - Cargo.toml
+#   - README.md
+# - Update CHANGELOG.md.
+# - Create "v0.1.x" git tag.
 version = "0.1.0"
 authors = ["Carl Lerche <me@carllerche.com>"]
+readme = "README.md"
+documentation = "https://docs.rs/http-body/0.1.0/http-body"
+repository = "https://github.com/hyperium/http-body"
+homepage = "https://github.com/hyperium/http-body"
+license = "MIT"
+description = """
+Trait representing an asynchronous, streaming, HTTP request or response body.
+"""
+keywords = ["http"]
+categories = ["web-programming"]
 
 [dependencies]
 bytes = "0.4.11"
