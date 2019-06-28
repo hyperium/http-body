@@ -23,6 +23,5 @@ categories = ["web-programming"]
 
 [dependencies]
 bytes = "0.4.11"
-futures = "0.1.25"
 http = "0.1.16"
 tokio-buf = { version = "0.1.0", default-features = false }

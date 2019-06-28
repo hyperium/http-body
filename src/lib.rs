@@ -9,14 +9,14 @@
 //! [`Body`]: trait.Body.html
 
 extern crate bytes;
-extern crate futures;
 extern crate http;
 extern crate tokio_buf;
 
 use bytes::Buf;
-use futures::{Async, Poll};
 use http::HeaderMap;
-use tokio_buf::{BufStream, SizeHint};
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use tokio_buf::SizeHint;
 
 /// Trait representing a streaming body of a Request or Response.
 ///
@@ -45,7 +45,10 @@ pub trait Body {
     type Error;
 
     /// Attempt to pull out the next data buffer of this stream.
-    fn poll_data(&mut self) -> Poll<Option<Self::Data>, Self::Error>;
+    fn poll_data(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<Self::Data>, Self::Error>>;
 
     /// Returns the bounds on the remaining length of the stream.
     ///
@@ -58,7 +61,10 @@ pub trait Body {
     /// Poll for an optional **single** `HeaderMap` of trailers.
     ///
     /// This function should only be called once `poll_data` returns `None`.
-    fn poll_trailers(&mut self) -> Poll<Option<HeaderMap>, Self::Error>;
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>>;
 
     /// Returns `true` when the end of stream has been reached.
     ///
@@ -72,28 +78,28 @@ pub trait Body {
     }
 }
 
-impl<T: BufStream> Body for T {
-    type Data = T::Item;
-    type Error = T::Error;
+// impl<T: BufStream> Body for T {
+//     type Data = T::Item;
+//     type Error = T::Error;
 
-    fn poll_data(&mut self) -> Poll<Option<Self::Data>, Self::Error> {
-        BufStream::poll_buf(self)
-    }
+//     fn poll_data(&mut self) -> Poll<Option<Self::Data>, Self::Error> {
+//         BufStream::poll_buf(self)
+//     }
 
-    fn size_hint(&self) -> SizeHint {
-        BufStream::size_hint(self)
-    }
+//     fn size_hint(&self) -> SizeHint {
+//         BufStream::size_hint(self)
+//     }
 
-    fn poll_trailers(&mut self) -> Poll<Option<HeaderMap>, Self::Error> {
-        Ok(Async::Ready(None))
-    }
+//     fn poll_trailers(&mut self) -> Poll<Option<HeaderMap>, Self::Error> {
+//         Ok(Async::Ready(None))
+//     }
 
-    fn is_end_stream(&self) -> bool {
-        let size_hint = self.size_hint();
+//     fn is_end_stream(&self) -> bool {
+//         let size_hint = self.size_hint();
 
-        size_hint
-            .upper()
-            .map(|upper| upper == 0 && upper == size_hint.lower())
-            .unwrap_or(false)
-    }
-}
+//         size_hint
+//             .upper()
+//             .map(|upper| upper == 0 && upper == size_hint.lower())
+//             .unwrap_or(false)
+//     }
+// }

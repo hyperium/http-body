@@ -1,3 +1,5 @@
+#![cfg(feature = "broken")]
+
 extern crate futures;
 extern crate http_body;
 extern crate tokio_buf;
@@ -14,7 +16,7 @@ impl BufStream for Mock {
     type Item = ::std::io::Cursor<Vec<u8>>;
     type Error = ();
 
-    fn poll_buf(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+    fn poll_buf(self: Pin<&mut Self>) -> Poll<Result<Option<Self::Item>, Self::Error>> {
         unimplemented!();
     }
 
