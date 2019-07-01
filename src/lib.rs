@@ -14,6 +14,7 @@ extern crate tokio_buf;
 
 use bytes::Buf;
 use http::HeaderMap;
+use std::ops::DerefMut;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio_buf::SizeHint;
@@ -75,6 +76,85 @@ pub trait Body {
     /// returned from `poll_stream` or `poll_trailers`.
     fn is_end_stream(&self) -> bool {
         false
+    }
+}
+
+impl<T> Body for Pin<T>
+where
+    T: DerefMut + Unpin,
+    T::Target: Body,
+{
+    type Data = <T::Target as Body>::Data;
+    type Error = <T::Target as Body>::Error;
+
+    fn is_end_stream(&self) -> bool {
+        self.as_ref().is_end_stream()
+    }
+
+    fn poll_data(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<Self::Data>, Self::Error>> {
+        self.get_mut().as_mut().poll_data(cx)
+    }
+
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
+        self.get_mut().as_mut().poll_trailers(cx)
+    }
+}
+
+impl<T> Body for &mut T
+where
+    T: Body + Unpin + ?Sized,
+{
+    type Data = T::Data;
+    type Error = T::Error;
+
+    fn is_end_stream(&self) -> bool {
+        T::is_end_stream(self)
+    }
+
+    fn poll_data(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<Self::Data>, Self::Error>> {
+        T::poll_data(Pin::new(&mut **self), cx)
+    }
+
+    fn poll_trailers(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
+        T::poll_trailers(Pin::new(&mut **self), cx)
+    }
+}
+
+impl<T> Body for Box<T>
+where
+    T: Body + Unpin + ?Sized,
+{
+    type Data = T::Data;
+    type Error = T::Error;
+
+    fn is_end_stream(&self) -> bool {
+        T::is_end_stream(self)
+    }
+
+    fn poll_data(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<Self::Data>, Self::Error>> {
+        T::poll_data(Pin::new(&mut **self), cx)
+    }
+
+    fn poll_trailers(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
+        T::poll_trailers(Pin::new(&mut **self), cx)
     }
 }
 
