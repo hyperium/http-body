@@ -56,7 +56,7 @@ pub trait Body {
     fn poll_trailers(
         &mut self,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<HeaderMap, Self::Error>>>;
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>>;
 
     /// Returns `true` when the end of stream has been reached.
     ///
@@ -85,8 +85,8 @@ impl<T: BufStream> Body for T {
     fn poll_trailers(
         &mut self,
         _cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<HeaderMap, Self::Error>>> {
-        None.into()
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+        Ok(None).into()
     }
 
     fn is_end_stream(&self) -> bool {
