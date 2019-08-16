@@ -10,6 +10,7 @@ name = "http-body"
 # - Create "v0.1.x" git tag.
 version = "0.1.0"
 authors = ["Carl Lerche <me@carllerche.com>"]
+edition = "2018"
 readme = "README.md"
 documentation = "https://docs.rs/http-body/0.1.0/http-body"
 repository = "https://github.com/hyperium/http-body"
@@ -23,6 +24,5 @@ categories = ["web-programming"]
 
 [dependencies]
 bytes = "0.4.11"
-futures = "0.1.25"
 http = "0.1.16"
-tokio-buf = { version = "0.1.0", default-features = false }
+tokio-buf = { version = "=0.2.0-alpha.1", default-features = false }

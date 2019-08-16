@@ -1,9 +1,5 @@
-extern crate futures;
-extern crate http_body;
-extern crate tokio_buf;
-
-use futures::Poll;
 use http_body::Body;
+use std::task::{Context, Poll};
 use tokio_buf::{BufStream, SizeHint};
 
 struct Mock {
@@ -14,7 +10,7 @@ impl BufStream for Mock {
     type Item = ::std::io::Cursor<Vec<u8>>;
     type Error = ();
 
-    fn poll_buf(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+    fn poll_buf(&mut self, _cx: &mut Context<'_>) -> Poll<Option<Result<Self::Item, Self::Error>>> {
         unimplemented!();
     }
 
