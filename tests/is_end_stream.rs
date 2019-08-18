@@ -1,3 +1,5 @@
+#![cfg(feature = "broken")]
+
 use http_body::Body;
 use std::task::{Context, Poll};
 use tokio_buf::{BufStream, SizeHint};

@@ -12,7 +12,6 @@ use bytes::Buf;
 use http::HeaderMap;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use tokio_buf::{BufStream, SizeHint};
 
 /// Trait representing a streaming body of a Request or Response.
 ///
@@ -46,13 +45,13 @@ pub trait Body {
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Self::Data, Self::Error>>>;
 
-    /// Returns the bounds on the remaining length of the stream.
-    ///
-    /// When the **exact** remaining length of the stream is known, the upper bound will be set and
-    /// will equal the lower bound.
-    fn size_hint(&self) -> SizeHint {
-        SizeHint::default()
-    }
+    // /// Returns the bounds on the remaining length of the stream.
+    // ///
+    // /// When the **exact** remaining length of the stream is known, the upper bound will be set and
+    // /// will equal the lower bound.
+    // fn size_hint(&self) -> SizeHint {
+    //     SizeHint::default()
+    // }
 
     /// Poll for an optional **single** `HeaderMap` of trailers.
     ///
@@ -71,37 +70,5 @@ pub trait Body {
     /// returned from `poll_stream` or `poll_trailers`.
     fn is_end_stream(&self) -> bool {
         false
-    }
-}
-
-impl<T: BufStream + Unpin> Body for T {
-    type Data = T::Item;
-    type Error = T::Error;
-
-    fn poll_data(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-        BufStream::poll_buf(&mut *self, cx)
-    }
-
-    fn size_hint(&self) -> SizeHint {
-        BufStream::size_hint(self)
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        Ok(None).into()
-    }
-
-    fn is_end_stream(&self) -> bool {
-        let size_hint = self.size_hint();
-
-        size_hint
-            .upper()
-            .map(|upper| upper == 0 && upper == size_hint.lower())
-            .unwrap_or(false)
     }
 }

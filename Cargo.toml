@@ -25,4 +25,3 @@ categories = ["web-programming"]
 [dependencies]
 bytes = "0.4.11"
 http = "0.1.16"
-tokio-buf = { version = "=0.2.0-alpha.1", default-features = false }
