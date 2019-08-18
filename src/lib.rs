@@ -10,6 +10,7 @@
 
 use bytes::Buf;
 use http::HeaderMap;
+use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio_buf::{BufStream, SizeHint};
 
@@ -40,7 +41,10 @@ pub trait Body {
     type Error;
 
     /// Attempt to pull out the next data buffer of this stream.
-    fn poll_data(&mut self, cx: &mut Context<'_>) -> Poll<Option<Result<Self::Data, Self::Error>>>;
+    fn poll_data(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>>;
 
     /// Returns the bounds on the remaining length of the stream.
     ///
@@ -54,7 +58,7 @@ pub trait Body {
     ///
     /// This function should only be called once `poll_data` returns `None`.
     fn poll_trailers(
-        &mut self,
+        self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Result<Option<HeaderMap>, Self::Error>>;
 
@@ -70,12 +74,15 @@ pub trait Body {
     }
 }
 
-impl<T: BufStream> Body for T {
+impl<T: BufStream + Unpin> Body for T {
     type Data = T::Item;
     type Error = T::Error;
 
-    fn poll_data(&mut self, cx: &mut Context<'_>) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-        BufStream::poll_buf(self, cx)
+    fn poll_data(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        BufStream::poll_buf(&mut *self, cx)
     }
 
     fn size_hint(&self) -> SizeHint {
@@ -83,7 +90,7 @@ impl<T: BufStream> Body for T {
     }
 
     fn poll_trailers(
-        &mut self,
+        self: Pin<&mut Self>,
         _cx: &mut Context<'_>,
     ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
         Ok(None).into()
