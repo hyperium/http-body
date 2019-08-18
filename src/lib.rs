@@ -8,8 +8,13 @@
 //!
 //! [`Body`]: trait.Body.html
 
+mod size_hint;
+
+pub use self::size_hint::SizeHint;
+
 use bytes::Buf;
 use http::HeaderMap;
+use std::ops;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
@@ -45,13 +50,13 @@ pub trait Body {
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Self::Data, Self::Error>>>;
 
-    // /// Returns the bounds on the remaining length of the stream.
-    // ///
-    // /// When the **exact** remaining length of the stream is known, the upper bound will be set and
-    // /// will equal the lower bound.
-    // fn size_hint(&self) -> SizeHint {
-    //     SizeHint::default()
-    // }
+    /// Returns the bounds on the remaining length of the stream.
+    ///
+    /// When the **exact** remaining length of the stream is known, the upper bound will be set and
+    /// will equal the lower bound.
+    fn size_hint(self: Pin<&mut Self>) -> SizeHint {
+        SizeHint::default()
+    }
 
     /// Poll for an optional **single** `HeaderMap` of trailers.
     ///
@@ -68,7 +73,97 @@ pub trait Body {
     ///
     /// A return value of `false` **does not** guarantee that a value will be
     /// returned from `poll_stream` or `poll_trailers`.
-    fn is_end_stream(&self) -> bool {
-        false
+    fn is_end_stream(self: Pin<&mut Self>) -> bool {
+        let size_hint = self.size_hint();
+
+        size_hint
+            .upper()
+            .map(|upper| upper == 0 && upper == size_hint.lower())
+            .unwrap_or(false)
+    }
+}
+
+impl<T: Body + Unpin + ?Sized> Body for &mut T {
+    type Data = T::Data;
+    type Error = T::Error;
+
+    fn poll_data(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        Pin::new(&mut **self).poll_data(cx)
+    }
+
+    fn poll_trailers(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+        Pin::new(&mut **self).poll_trailers(cx)
+    }
+
+    fn is_end_stream(mut self: Pin<&mut Self>) -> bool {
+        Pin::new(&mut **self).is_end_stream()
+    }
+
+    fn size_hint(mut self: Pin<&mut Self>) -> SizeHint {
+        Pin::new(&mut **self).size_hint()
+    }
+}
+
+impl<P> Body for Pin<P>
+where
+    P: Unpin + ops::DerefMut,
+    P::Target: Body,
+{
+    type Data = <<P as ops::Deref>::Target as Body>::Data;
+    type Error = <<P as ops::Deref>::Target as Body>::Error;
+
+    fn poll_data(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        Pin::get_mut(self).as_mut().poll_data(cx)
+    }
+
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+        Pin::get_mut(self).as_mut().poll_trailers(cx)
+    }
+
+    fn is_end_stream(self: Pin<&mut Self>) -> bool {
+        Pin::get_mut(self).as_mut().is_end_stream()
+    }
+
+    fn size_hint(self: Pin<&mut Self>) -> SizeHint {
+        Pin::get_mut(self).as_mut().size_hint()
+    }
+}
+
+impl<T: Body + Unpin + ?Sized> Body for Box<T> {
+    type Data = T::Data;
+    type Error = T::Error;
+
+    fn poll_data(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        Pin::new(&mut **self).poll_data(cx)
+    }
+
+    fn poll_trailers(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+        Pin::new(&mut **self).poll_trailers(cx)
+    }
+
+    fn is_end_stream(mut self: Pin<&mut Self>) -> bool {
+        Pin::new(&mut **self).is_end_stream()
+    }
+
+    fn size_hint(mut self: Pin<&mut Self>) -> SizeHint {
+        Pin::new(&mut **self).size_hint()
     }
 }

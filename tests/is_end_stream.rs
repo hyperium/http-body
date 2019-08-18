@@ -1,28 +1,37 @@
-#![cfg(feature = "broken")]
-
-use http_body::Body;
+use http::HeaderMap;
+use http_body::{Body, SizeHint};
+use std::pin::Pin;
 use std::task::{Context, Poll};
-use tokio_buf::{BufStream, SizeHint};
 
 struct Mock {
     size_hint: SizeHint,
 }
 
-impl BufStream for Mock {
-    type Item = ::std::io::Cursor<Vec<u8>>;
+impl Body for Mock {
+    type Data = ::std::io::Cursor<Vec<u8>>;
     type Error = ();
 
-    fn poll_buf(&mut self, _cx: &mut Context<'_>) -> Poll<Option<Result<Self::Item, Self::Error>>> {
-        unimplemented!();
+    fn poll_data(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        Poll::Ready(None)
     }
 
-    fn size_hint(&self) -> SizeHint {
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+        Poll::Ready(Ok(None))
+    }
+
+    fn size_hint(self: Pin<&mut Self>) -> SizeHint {
         self.size_hint.clone()
     }
 }
 
 #[test]
-fn buf_stream_is_end_stream() {
+fn is_end_stream_true() {
     let combos = [
         (None, None, false),
         (Some(123), None, false),
@@ -44,12 +53,27 @@ fn buf_stream_is_end_stream() {
             size_hint.set_upper(upper);
         }
 
-        let mock = Mock { size_hint };
+        let mut mock = Mock { size_hint };
+
         assert_eq!(
             is_end_stream,
-            mock.is_end_stream(),
+            Pin::new(&mut mock).is_end_stream(),
             "size_hint = {:?}",
-            mock.size_hint
+            mock.size_hint.clone()
         );
     }
+}
+
+#[test]
+fn is_end_stream_default_false() {
+    let mut mock = Mock {
+        size_hint: SizeHint::default(),
+    };
+
+    assert_eq!(
+        false,
+        Pin::new(&mut mock).is_end_stream(),
+        "size_hint = {:?}",
+        mock.size_hint.clone()
+    );
 }
