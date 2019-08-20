@@ -50,14 +50,6 @@ pub trait Body {
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Self::Data, Self::Error>>>;
 
-    /// Returns the bounds on the remaining length of the stream.
-    ///
-    /// When the **exact** remaining length of the stream is known, the upper bound will be set and
-    /// will equal the lower bound.
-    fn size_hint(self: Pin<&mut Self>) -> SizeHint {
-        SizeHint::default()
-    }
-
     /// Poll for an optional **single** `HeaderMap` of trailers.
     ///
     /// This function should only be called once `poll_data` returns `None`.
@@ -73,13 +65,21 @@ pub trait Body {
     ///
     /// A return value of `false` **does not** guarantee that a value will be
     /// returned from `poll_stream` or `poll_trailers`.
-    fn is_end_stream(self: Pin<&mut Self>) -> bool {
+    fn is_end_stream(&self) -> bool {
         let size_hint = self.size_hint();
 
         size_hint
             .upper()
             .map(|upper| upper == 0 && upper == size_hint.lower())
             .unwrap_or(false)
+    }
+
+    /// Returns the bounds on the remaining length of the stream.
+    ///
+    /// When the **exact** remaining length of the stream is known, the upper bound will be set and
+    /// will equal the lower bound.
+    fn size_hint(&self) -> SizeHint {
+        SizeHint::default()
     }
 }
 
@@ -101,12 +101,12 @@ impl<T: Body + Unpin + ?Sized> Body for &mut T {
         Pin::new(&mut **self).poll_trailers(cx)
     }
 
-    fn is_end_stream(mut self: Pin<&mut Self>) -> bool {
-        Pin::new(&mut **self).is_end_stream()
+    fn is_end_stream(&self) -> bool {
+        Pin::new(&**self).is_end_stream()
     }
 
-    fn size_hint(mut self: Pin<&mut Self>) -> SizeHint {
-        Pin::new(&mut **self).size_hint()
+    fn size_hint(&self) -> SizeHint {
+        Pin::new(&**self).size_hint()
     }
 }
 
@@ -132,12 +132,12 @@ where
         Pin::get_mut(self).as_mut().poll_trailers(cx)
     }
 
-    fn is_end_stream(self: Pin<&mut Self>) -> bool {
-        Pin::get_mut(self).as_mut().is_end_stream()
+    fn is_end_stream(&self) -> bool {
+        self.as_ref().is_end_stream()
     }
 
-    fn size_hint(self: Pin<&mut Self>) -> SizeHint {
-        Pin::get_mut(self).as_mut().size_hint()
+    fn size_hint(&self) -> SizeHint {
+        self.as_ref().size_hint()
     }
 }
 
@@ -159,11 +159,11 @@ impl<T: Body + Unpin + ?Sized> Body for Box<T> {
         Pin::new(&mut **self).poll_trailers(cx)
     }
 
-    fn is_end_stream(mut self: Pin<&mut Self>) -> bool {
-        Pin::new(&mut **self).is_end_stream()
+    fn is_end_stream(&self) -> bool {
+        self.as_ref().is_end_stream()
     }
 
-    fn size_hint(mut self: Pin<&mut Self>) -> SizeHint {
-        Pin::new(&mut **self).size_hint()
+    fn size_hint(&self) -> SizeHint {
+        self.as_ref().size_hint()
     }
 }

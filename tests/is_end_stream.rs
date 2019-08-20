@@ -25,7 +25,7 @@ impl Body for Mock {
         Poll::Ready(Ok(None))
     }
 
-    fn size_hint(self: Pin<&mut Self>) -> SizeHint {
+    fn size_hint(&self) -> SizeHint {
         self.size_hint.clone()
     }
 }
