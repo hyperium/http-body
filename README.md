@@ -12,25 +12,6 @@ documentation][dox].
 
 [dox]: https://docs.rs/http-body
 
-## Usage
-
-To use `http-body`, first add this to your `Cargo.toml`:
-
-```toml
-[dependencies]
-http-body = "0.1.0"
-```
-
-Next, add this to your crate:
-
-```rust
-use http_body::Body;
-
-fn main() {
-    // ...
-}
-```
-
 ## License
 
 This project is licensed under the [MIT license](LICENSE).
