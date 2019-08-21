@@ -15,12 +15,14 @@ pub struct SizeHint {
 
 impl SizeHint {
     /// Returns a new `SizeHint` with default values
+    #[inline]
     pub fn new() -> SizeHint {
         SizeHint::default()
     }
 
     /// Returns the lower bound of data that the `BufStream` will yield before
     /// completing.
+    #[inline]
     pub fn lower(&self) -> u64 {
         self.lower
     }
@@ -30,6 +32,7 @@ impl SizeHint {
     /// # Panics
     ///
     /// The function panics if `value` is greater than `upper`.
+    #[inline]
     pub fn set_lower(&mut self, value: u64) {
         assert!(value <= self.upper.unwrap_or(u64::MAX));
         self.lower = value;
@@ -37,6 +40,7 @@ impl SizeHint {
 
     /// Returns the upper bound of data the `BufStream` will yield before
     /// completing, or `None` if the value is unknown.
+    #[inline]
     pub fn upper(&self) -> Option<u64> {
         self.upper
     }
@@ -46,11 +50,30 @@ impl SizeHint {
     /// # Panics
     ///
     /// This function panics if `value` is less than `lower`.
+    #[inline]
     pub fn set_upper(&mut self, value: u64) {
         // There is no need to check `available` as that is guaranteed to be
         // less than or equal to `lower`.
         assert!(value >= self.lower, "`value` is less than than `lower`");
 
+        self.upper = Some(value);
+    }
+
+    /// Returns the exact size of data that will be yielded **if** the
+    /// `lower` and `upper` bounds are equal.
+    #[inline]
+    pub fn exact(&self) -> Option<u64> {
+        if Some(self.lower) == self.upper {
+            self.upper
+        } else {
+            None
+        }
+    }
+
+    /// Set the value of the `lower` and `upper` bounds to exactly the same.
+    #[inline]
+    pub fn set_exact(&mut self, value: u64) {
+        self.lower = value;
         self.upper = Some(value);
     }
 }
