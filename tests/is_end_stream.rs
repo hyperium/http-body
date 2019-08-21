@@ -37,7 +37,7 @@ fn is_end_stream_true() {
         (Some(123), None, false),
         (Some(0), Some(123), false),
         (Some(123), Some(123), false),
-        (Some(0), Some(0), true),
+        (Some(0), Some(0), false),
     ];
 
     for &(lower, upper, is_end_stream) in &combos {
