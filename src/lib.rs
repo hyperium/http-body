@@ -66,12 +66,7 @@ pub trait Body {
     /// A return value of `false` **does not** guarantee that a value will be
     /// returned from `poll_stream` or `poll_trailers`.
     fn is_end_stream(&self) -> bool {
-        let size_hint = self.size_hint();
-
-        size_hint
-            .upper()
-            .map(|upper| upper == 0 && upper == size_hint.lower())
-            .unwrap_or(false)
+        false
     }
 
     /// Returns the bounds on the remaining length of the stream.
