@@ -30,7 +30,7 @@ pub trait Body {
     /// Values yielded by the `Body`.
     type Data: Buf;
 
-    /// The error type this `BufStream` might generate.
+    /// The error type this `Body` might generate.
     type Error;
 
     /// Attempt to pull out the next data buffer of this stream.
