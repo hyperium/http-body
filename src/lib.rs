@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/http-body/0.1.0")]
+#![doc(html_root_url = "https://docs.rs/http-body/0.2.0-alpha.1")]
 #![deny(missing_debug_implementations, missing_docs, unreachable_pub)]
 #![cfg_attr(test, deny(warnings))]
 
@@ -26,22 +26,11 @@ use std::task::{Context, Poll};
 /// The `poll_trailers` function returns an optional set of trailers used to finalize the request /
 /// response exchange. This is mostly used when using the HTTP/2.0 protocol.
 ///
-/// # Relation with [`BufStream`].
-///
-/// The `Body` trait is a superset of the `BufStream` trait. However, `BufStream` is not considered
-/// a super trait of `Body`. Instead, a `T: Body` can be thought of as containing a `BufStream` as
-/// well as the HTTP trailers.
-///
-/// There exists is a blanket implementation of `Body` for `T: BufStream`. In other words, any type
-/// that implements `BufStream` also implements `Body` yielding no trailers.
-///
-/// [`BufStream`]: https://docs.rs/tokio-buf/0.1.1/tokio_buf/trait.BufStream.html
-///
 pub trait Body {
     /// Values yielded by the `Body`.
     type Data: Buf;
 
-    /// The error type this `BufStream` might generate.
+    /// The error type this `Body` might generate.
     type Error;
 
     /// Attempt to pull out the next data buffer of this stream.

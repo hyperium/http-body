@@ -1,6 +1,6 @@
 use std::u64;
 
-/// A `BufStream` size hint
+/// A `Body` size hint
 ///
 /// The default implementation returns:
 ///
@@ -11,6 +11,7 @@ use std::u64;
 pub struct SizeHint {
     lower: u64,
     upper: Option<u64>,
+    ready: bool,
 }
 
 impl SizeHint {
@@ -20,7 +21,7 @@ impl SizeHint {
         SizeHint::default()
     }
 
-    /// Returns the lower bound of data that the `BufStream` will yield before
+    /// Returns the lower bound of data that the `Body` will yield before
     /// completing.
     #[inline]
     pub fn lower(&self) -> u64 {
@@ -38,7 +39,7 @@ impl SizeHint {
         self.lower = value;
     }
 
-    /// Returns the upper bound of data the `BufStream` will yield before
+    /// Returns the upper bound of data the `Body` will yield before
     /// completing, or `None` if the value is unknown.
     #[inline]
     pub fn upper(&self) -> Option<u64> {
