@@ -23,7 +23,10 @@ impl SizeHint {
     /// given value.
     #[inline]
     pub fn with_exact(value: u64) -> SizeHint {
-        SizeHint { lower: value, upper: Some(value) }
+        SizeHint {
+            lower: value,
+            upper: Some(value),
+        }
     }
 
     /// Returns the lower bound of data that the `Body` will yield before
