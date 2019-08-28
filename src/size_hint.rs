@@ -4,14 +4,12 @@ use std::u64;
 ///
 /// The default implementation returns:
 ///
-/// * 0 for `available`
 /// * 0 for `lower`
 /// * `None` for `upper`.
 #[derive(Debug, Default, Clone)]
 pub struct SizeHint {
     lower: u64,
     upper: Option<u64>,
-    ready: bool,
 }
 
 impl SizeHint {
@@ -53,8 +51,6 @@ impl SizeHint {
     /// This function panics if `value` is less than `lower`.
     #[inline]
     pub fn set_upper(&mut self, value: u64) {
-        // There is no need to check `available` as that is guaranteed to be
-        // less than or equal to `lower`.
         assert!(value >= self.lower, "`value` is less than than `lower`");
 
         self.upper = Some(value);
