@@ -19,6 +19,13 @@ impl SizeHint {
         SizeHint::default()
     }
 
+    /// Returns a new `SizeHint` with both upper and lower bounds set to the
+    /// given value.
+    #[inline]
+    pub fn with_exact(value: u64) -> SizeHint {
+        SizeHint { lower: value, upper: Some(value) }
+    }
+
     /// Returns the lower bound of data that the `Body` will yield before
     /// completing.
     #[inline]
