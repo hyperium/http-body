@@ -8,8 +8,8 @@
 //!
 //! [`Body`]: trait.Body.html
 
-mod size_hint;
 mod next;
+mod size_hint;
 
 pub use self::next::{NextData, NextTrailers};
 pub use self::size_hint::SizeHint;
@@ -69,12 +69,18 @@ pub trait Body {
     }
 
     /// Returns future that resolves to next data chunk, if any.
-    fn next_data(&mut self) -> NextData<'_, Self> where Self: Sized {
+    fn next_data(&mut self) -> NextData<'_, Self>
+    where
+        Self: Sized,
+    {
         NextData(self)
     }
 
     /// Returns future that resolves to next data chunk, if any.
-    fn next_trailers(&mut self) -> NextTrailers<'_, Self> where Self: Sized {
+    fn next_trailers(&mut self) -> NextTrailers<'_, Self>
+    where
+        Self: Sized,
+    {
         NextTrailers(self)
     }
 }

@@ -14,9 +14,7 @@ impl<'a, T: Body + Unpin> Future for NextData<'a, T> {
     type Output = Option<Result<T::Data, T::Error>>;
 
     fn poll(self: Pin<&mut Self>, ctx: &mut task::Context<'_>) -> task::Poll<Self::Output> {
-        let body = unsafe {
-            self.map_unchecked_mut(|this| &mut this.0)
-        };
+        let body = unsafe { self.map_unchecked_mut(|this| &mut this.0) };
 
         Body::poll_data(body, ctx)
     }
@@ -30,9 +28,7 @@ impl<'a, T: Body + Unpin> Future for NextTrailers<'a, T> {
     type Output = Result<Option<http::HeaderMap>, T::Error>;
 
     fn poll(self: Pin<&mut Self>, ctx: &mut task::Context<'_>) -> task::Poll<Self::Output> {
-        let body = unsafe {
-            self.map_unchecked_mut(|this| &mut this.0)
-        };
+        let body = unsafe { self.map_unchecked_mut(|this| &mut this.0) };
 
         Body::poll_trailers(body, ctx)
     }
