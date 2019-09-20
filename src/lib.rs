@@ -76,7 +76,7 @@ pub trait Body {
         NextData(self)
     }
 
-    /// Returns future that resolves to next data chunk, if any.
+    /// Returns future that resolves to next trailers, if any.
     fn next_trailers(&mut self) -> NextTrailers<'_, Self>
     where
         Self: Unpin,
