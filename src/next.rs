@@ -7,7 +7,7 @@ use core::pin::Pin;
 use core::task;
 
 #[derive(Debug)]
-///Future that resolves to the next data chunk from `Body`
+/// Future that resolves to the next data chunk from `Body`
 pub struct NextData<'a, T>(pub(crate) &'a mut T);
 
 impl<'a, T: Body + Unpin> Future for NextData<'a, T> {
@@ -21,7 +21,7 @@ impl<'a, T: Body + Unpin> Future for NextData<'a, T> {
 }
 
 #[derive(Debug)]
-///Future that resolves to the optional trailers from `Body`
+/// Future that resolves to the optional trailers from `Body`
 pub struct NextTrailers<'a, T>(pub(crate) &'a mut T);
 
 impl<'a, T: Body + Unpin> Future for NextTrailers<'a, T> {
