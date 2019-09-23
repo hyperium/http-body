@@ -8,8 +8,10 @@
 //!
 //! [`Body`]: trait.Body.html
 
+mod next;
 mod size_hint;
 
+pub use self::next::{Next, Trailers};
 pub use self::size_hint::SizeHint;
 
 use bytes::Buf;
@@ -64,6 +66,22 @@ pub trait Body {
     /// will equal the lower bound.
     fn size_hint(&self) -> SizeHint {
         SizeHint::default()
+    }
+
+    /// Returns future that resolves to next data chunk, if any.
+    fn next(&mut self) -> Next<'_, Self>
+    where
+        Self: Unpin,
+    {
+        Next(self)
+    }
+
+    /// Returns future that resolves to trailers, if any.
+    fn trailers(&mut self) -> Trailers<'_, Self>
+    where
+        Self: Unpin,
+    {
+        Trailers(self)
     }
 }
 
