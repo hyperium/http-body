@@ -13,10 +13,8 @@ pub struct Next<'a, T: ?Sized>(pub(crate) &'a mut T);
 impl<'a, T: Body + Unpin + ?Sized> Future for Next<'a, T> {
     type Output = Option<Result<T::Data, T::Error>>;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut task::Context<'_>) -> task::Poll<Self::Output> {
-        let body = unsafe { self.map_unchecked_mut(|this| &mut this.0) };
-
-        Body::poll_data(body, ctx)
+    fn poll(mut self: Pin<&mut Self>, ctx: &mut task::Context<'_>) -> task::Poll<Self::Output> {
+        Pin::new(&mut self.0).poll_data(ctx)
     }
 }
 
@@ -27,9 +25,7 @@ pub struct Trailers<'a, T: ?Sized>(pub(crate) &'a mut T);
 impl<'a, T: Body + Unpin + ?Sized> Future for Trailers<'a, T> {
     type Output = Result<Option<http::HeaderMap>, T::Error>;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut task::Context<'_>) -> task::Poll<Self::Output> {
-        let body = unsafe { self.map_unchecked_mut(|this| &mut this.0) };
-
-        Body::poll_trailers(body, ctx)
+    fn poll(mut self: Pin<&mut Self>, ctx: &mut task::Context<'_>) -> task::Poll<Self::Output> {
+        Pin::new(&mut self.0).poll_trailers(ctx)
     }
 }
