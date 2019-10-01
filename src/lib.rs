@@ -71,7 +71,7 @@ pub trait Body {
     /// Returns future that resolves to next data chunk, if any.
     fn next(&mut self) -> Next<'_, Self>
     where
-        Self: Unpin,
+        Self: Unpin + Sized,
     {
         Next(self)
     }
@@ -79,7 +79,7 @@ pub trait Body {
     /// Returns future that resolves to trailers, if any.
     fn trailers(&mut self) -> Trailers<'_, Self>
     where
-        Self: Unpin,
+        Self: Unpin + Sized,
     {
         Trailers(self)
     }
@@ -168,4 +168,9 @@ impl<T: Body + Unpin + ?Sized> Body for Box<T> {
     fn size_hint(&self) -> SizeHint {
         self.as_ref().size_hint()
     }
+}
+
+#[cfg(test)]
+fn _assert_bounds() {
+    fn can_be_trait_object(_: &dyn Body<Data = std::io::Cursor<Vec<u8>>, Error = std::io::Error>) {}
 }
