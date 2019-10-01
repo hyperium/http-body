@@ -1,3 +1,7 @@
+# 0.2.0-alpha.3 (October 1, 2019)
+
+- Fix `Body` to be object-safe.
+
 # 0.2.0-alpha.2 (October 1, 2019)
 
 - Add `next` and `trailers` combinator methods.
