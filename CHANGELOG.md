@@ -1,3 +1,7 @@
+# 0.2.0-alpha.2 (October 1, 2019)
+
+- Add `next` and `trailers` combinator methods.
+
 # 0.2.0-alpha.1 (August 20, 2019)
 
 - Update to use `Pin` in `poll_data` and `poll_trailers`.

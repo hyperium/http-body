@@ -8,11 +8,11 @@ name = "http-body"
 #   - README.md
 # - Update CHANGELOG.md.
 # - Create "v0.1.x" git tag.
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 authors = ["Carl Lerche <me@carllerche.com>"]
 edition = "2018"
 readme = "README.md"
-documentation = "https://docs.rs/http-body/0.2.0-alpha.1/http-body"
+documentation = "https://docs.rs/http-body/0.2.0-alpha.2/http-body"
 repository = "https://github.com/hyperium/http-body"
 homepage = "https://github.com/hyperium/http-body"
 license = "MIT"
