@@ -23,5 +23,5 @@ keywords = ["http"]
 categories = ["web-programming"]
 
 [dependencies]
-bytes = "0.4.11"
+bytes = "0.5"
 http = "0.1.16"
