@@ -7,14 +7,17 @@ name = "http-body"
 #   - Cargo.toml
 #   - README.md
 # - Update CHANGELOG.md.
-# - Create "v0.1.x" git tag.
-version = "0.2.0-alpha.3"
-authors = ["Carl Lerche <me@carllerche.com>"]
+# - Create "v0.2.x" git tag.
+version = "0.2.0"
+authors = [
+  "Carl Lerche <me@carllerche.com>",
+  "Lucio Franco <luciofranco14@gmail.com>",
+  "Sean McArthur <sean@seanmonstar.com>",
+]
 edition = "2018"
 readme = "README.md"
-documentation = "https://docs.rs/http-body/0.2.0-alpha.3/http-body"
+documentation = "https://docs.rs/http-body/0.2.0/http-body"
 repository = "https://github.com/hyperium/http-body"
-homepage = "https://github.com/hyperium/http-body"
 license = "MIT"
 description = """
 Trait representing an asynchronous, streaming, HTTP request or response body.
