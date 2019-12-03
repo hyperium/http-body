@@ -1,3 +1,8 @@
+# 0.2.0 (December 3, 2019)
+
+- Update `http` to v0.2.
+- Update `bytes` to v0.5.
+
 # 0.2.0-alpha.3 (October 1, 2019)
 
 - Fix `Body` to be object-safe.
