@@ -1,3 +1,7 @@
+# 0.3.0 (December 4, 2019)
+
+- Rename `next` combinator to `data`.
+
 # 0.2.0 (December 3, 2019)
 
 - Update `http` to v0.2.
