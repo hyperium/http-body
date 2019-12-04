@@ -11,7 +11,7 @@
 mod next;
 mod size_hint;
 
-pub use self::next::{Next, Trailers};
+pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
 
 use bytes::Buf;
@@ -69,11 +69,11 @@ pub trait Body {
     }
 
     /// Returns future that resolves to next data chunk, if any.
-    fn next(&mut self) -> Next<'_, Self>
+    fn data(&mut self) -> Data<'_, Self>
     where
         Self: Unpin + Sized,
     {
-        Next(self)
+        Data(self)
     }
 
     /// Returns future that resolves to trailers, if any.
