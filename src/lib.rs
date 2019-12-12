@@ -170,6 +170,72 @@ impl<T: Body + Unpin + ?Sized> Body for Box<T> {
     }
 }
 
+impl<B: Body> Body for http::Request<B> {
+    type Data = B::Data;
+    type Error = B::Error;
+
+    fn poll_data(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        unsafe {
+            self.map_unchecked_mut(http::Request::body_mut)
+                .poll_data(cx)
+        }
+    }
+
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+        unsafe {
+            self.map_unchecked_mut(http::Request::body_mut)
+                .poll_trailers(cx)
+        }
+    }
+
+    fn is_end_stream(&self) -> bool {
+        self.body().is_end_stream()
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        self.body().size_hint()
+    }
+}
+
+impl<B: Body> Body for http::Response<B> {
+    type Data = B::Data;
+    type Error = B::Error;
+
+    fn poll_data(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        unsafe {
+            self.map_unchecked_mut(http::Response::body_mut)
+                .poll_data(cx)
+        }
+    }
+
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+        unsafe {
+            self.map_unchecked_mut(http::Response::body_mut)
+                .poll_trailers(cx)
+        }
+    }
+
+    fn is_end_stream(&self) -> bool {
+        self.body().is_end_stream()
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        self.body().size_hint()
+    }
+}
+
 #[cfg(test)]
 fn _assert_bounds() {
     fn can_be_trait_object(_: &dyn Body<Data = std::io::Cursor<Vec<u8>>, Error = std::io::Error>) {}
