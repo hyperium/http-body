@@ -1,3 +1,7 @@
+# 0.3.1 (December 13, 2019)
+
+- Implement `Body` for `http::Request<impl Body>` and `http::Response<impl Body>`.
+
 # 0.3.0 (December 4, 2019)
 
 - Rename `next` combinator to `data`.
