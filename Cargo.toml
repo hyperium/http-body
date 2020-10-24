@@ -8,7 +8,7 @@ name = "http-body"
 #   - README.md
 # - Update CHANGELOG.md.
 # - Create "vx.y.z" git tag.
-version = "0.3.1"
+version = "0.4.0"
 authors = [
   "Carl Lerche <me@carllerche.com>",
   "Lucio Franco <luciofranco14@gmail.com>",
@@ -26,5 +26,5 @@ keywords = ["http"]
 categories = ["web-programming"]
 
 [dependencies]
-bytes = "0.5"
+bytes = "0.6"
 http = "0.2"
