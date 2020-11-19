@@ -1,3 +1,7 @@
+# 0.4.0 UNRELEASED
+
+- Update `bytes` to v0.6.
+
 # 0.3.1 (December 13, 2019)
 
 - Implement `Body` for `http::Request<impl Body>` and `http::Response<impl Body>`.
