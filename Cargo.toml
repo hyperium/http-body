@@ -25,8 +25,6 @@ Trait representing an asynchronous, streaming, HTTP request or response body.
 keywords = ["http"]
 categories = ["web-programming"]
 
-publish = false
-
 [dependencies]
 bytes = "1"
 http = "0.2"
