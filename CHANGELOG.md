@@ -1,6 +1,6 @@
-# 0.4.0 UNRELEASED
+# 0.4.0 (December 23, 2020)
 
-- Update `bytes` to v0.6.
+- Update `bytes` to v1.0.
 
 # 0.3.1 (December 13, 2019)
 
