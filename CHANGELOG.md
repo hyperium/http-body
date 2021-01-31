@@ -1,3 +1,7 @@
+# Unreleased
+
+- Add `BodyExt` that provides a variety of convenient adapters.
+
 # 0.4.0 (December 23, 2020)
 
 - Update `bytes` to v1.0.

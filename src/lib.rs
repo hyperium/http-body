@@ -11,6 +11,10 @@
 mod next;
 mod size_hint;
 
+#[cfg(feature = "util")]
+#[cfg_attr(docsrs, doc(cfg(feature = "util")))]
+pub mod util;
+
 pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
 
