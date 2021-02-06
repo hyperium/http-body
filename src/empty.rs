@@ -11,7 +11,7 @@ use std::{
 /// A body that is always empty.
 #[derive(Debug, Clone, Copy)]
 pub struct Empty<D> {
-    _marker: PhantomData<D>,
+    _marker: PhantomData<fn() -> D>,
 }
 
 impl<D> Default for Empty<D> {
