@@ -43,6 +43,8 @@ pub trait BodyExt: Body {
 
     /// Turn this body into a [`Stream`].
     ///
+    /// Note that this disgards any trailers the body might have.
+    ///
     /// [`Stream`]: https://docs.rs/futures/latest/futures/stream/trait.Stream.html
     fn into_stream(self) -> IntoStream<Self>
     where
