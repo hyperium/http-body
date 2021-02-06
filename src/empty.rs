@@ -3,23 +3,15 @@ use bytes::Buf;
 use http::HeaderMap;
 use std::{
     convert::Infallible,
+    fmt,
     marker::PhantomData,
     pin::Pin,
     task::{Context, Poll},
 };
 
 /// A body that is always empty.
-#[derive(Debug, Clone, Copy)]
 pub struct Empty<D> {
     _marker: PhantomData<fn() -> D>,
-}
-
-impl<D> Default for Empty<D> {
-    fn default() -> Self {
-        Self {
-            _marker: PhantomData,
-        }
-    }
 }
 
 impl<D> Empty<D> {
@@ -49,3 +41,27 @@ impl<D: Buf> Body for Empty<D> {
         Poll::Ready(Ok(None))
     }
 }
+
+impl<D> fmt::Debug for Empty<D> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Empty").finish()
+    }
+}
+
+impl<D> Default for Empty<D> {
+    fn default() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<D> Clone for Empty<D> {
+    fn clone(&self) -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<D> Copy for Empty<D> {}
