@@ -69,12 +69,7 @@ where
         cx: &mut Context<'_>,
     ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
         let this = self.project();
-        match this.inner.poll_trailers(cx) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(Ok(None)) => Poll::Ready(Ok(None)),
-            Poll::Ready(Ok(Some(headers))) => Poll::Ready(Ok(Some(headers))),
-            Poll::Ready(Err(err)) => Poll::Ready(Err((this.f)(err))),
-        }
+        this.inner.poll_trailers(cx).map_err(this.f)
     }
 
     fn is_end_stream(&self) -> bool {
