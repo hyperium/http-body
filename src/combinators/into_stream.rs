@@ -10,6 +10,7 @@ pin_project! {
     /// Stream returned by the [`into_stream`] combinator.
     ///
     /// [`into_stream`]: crate::util::BodyExt::into_stream
+    #[derive(Debug, Clone, Copy)]
     pub struct IntoStream<B> {
         #[pin]
         body: B
