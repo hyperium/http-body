@@ -28,11 +28,5 @@ categories = ["web-programming"]
 [dependencies]
 bytes = "1"
 http = "0.2"
-
-# optional dependencies
-pin-project-lite = { version = "0.2", optional = true }
-futures-core = { version = "0.3", optional = true }
-
-[features]
-default = []
-util = ["pin-project-lite", "futures-core"]
+pin-project-lite = "0.2"
+futures-core = "0.3"

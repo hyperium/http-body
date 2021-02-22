@@ -11,13 +11,12 @@
 mod next;
 mod size_hint;
 
-#[cfg(feature = "util")]
-#[cfg_attr(docsrs, doc(cfg(feature = "util")))]
-pub mod util;
+mod combinators;
 
 pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
 
+use self::combinators::{BoxBody, IntoStream, MapData, MapErr};
 use bytes::Buf;
 use http::HeaderMap;
 use std::ops;
@@ -86,6 +85,45 @@ pub trait Body {
         Self: Unpin + Sized,
     {
         Trailers(self)
+    }
+
+    /// Maps this body's data value to a different value.
+    fn map_data<F, B>(self, f: F) -> MapData<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(Self::Data) -> B,
+        B: Buf,
+    {
+        MapData::new(self, f)
+    }
+
+    /// Maps this body's error value to a different value.
+    fn map_err<F, E>(self, f: F) -> MapErr<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(Self::Error) -> E,
+    {
+        MapErr::new(self, f)
+    }
+
+    /// Turn this body into a boxed trait object.
+    fn boxed(self) -> BoxBody<Self::Data, Self::Error>
+    where
+        Self: Sized + Send + Sync + 'static,
+    {
+        BoxBody::new(self)
+    }
+
+    /// Turn this body into a [`Stream`].
+    ///
+    /// Note that this disgards any trailers the body might have.
+    ///
+    /// [`Stream`]: https://docs.rs/futures/latest/futures/stream/trait.Stream.html
+    fn into_stream(self) -> IntoStream<Self>
+    where
+        Self: Sized,
+    {
+        IntoStream::new(self)
     }
 }
 
