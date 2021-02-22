@@ -1,5 +1,10 @@
 #![doc(html_root_url = "https://docs.rs/http-body/0.4.0")]
-#![deny(missing_debug_implementations, missing_docs, unreachable_pub)]
+#![deny(
+    missing_debug_implementations,
+    missing_docs,
+    unreachable_pub,
+    broken_intra_doc_links,
+)]
 #![cfg_attr(test, deny(warnings))]
 
 //! Asynchronous HTTP request or response body.
@@ -11,7 +16,7 @@
 mod next;
 mod size_hint;
 
-mod combinators;
+pub mod combinators;
 
 pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
