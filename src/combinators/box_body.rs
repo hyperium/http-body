@@ -1,12 +1,12 @@
 use crate::Body;
 use bytes::Buf;
 use std::{
+    fmt,
     pin::Pin,
     task::{Context, Poll},
 };
 
 /// A boxed [`Body`] trait object.
-#[allow(missing_debug_implementations)]
 pub struct BoxBody<D, E> {
     inner: Pin<Box<dyn Body<Data = D, Error = E> + Send + Sync + 'static>>,
 }
@@ -21,6 +21,12 @@ impl<D, E> BoxBody<D, E> {
         Self {
             inner: Box::pin(body),
         }
+    }
+}
+
+impl<D, E> fmt::Debug for BoxBody<D, E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "BoxBody")
     }
 }
 
