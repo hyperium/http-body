@@ -114,9 +114,10 @@ pub trait Body {
     }
 
     /// Turn this body into a boxed trait object.
-    fn boxed(self) -> BoxBody<Self::Data, Self::Error>
+    fn boxed(self) -> BoxBody<Self::Data>
     where
         Self: Sized + Send + Sync + 'static,
+        Self::Error: std::error::Error + Send + Sync,
     {
         BoxBody::new(self)
     }

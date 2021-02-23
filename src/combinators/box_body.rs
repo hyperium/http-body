@@ -7,35 +7,43 @@ use std::{
 };
 
 /// A boxed [`Body`] trait object.
-pub struct BoxBody<D, E> {
-    inner: Pin<Box<dyn Body<Data = D, Error = E> + Send + Sync + 'static>>,
+pub struct BoxBody<D> {
+    inner: Pin<
+        Box<
+            dyn Body<Data = D, Error = Box<dyn std::error::Error + Send + Sync>>
+                + Send
+                + Sync
+                + 'static,
+        >,
+    >,
 }
 
-impl<D, E> BoxBody<D, E> {
+impl<D> BoxBody<D> {
     /// Create a new `BoxBody`.
     pub fn new<B>(body: B) -> Self
     where
-        B: Body<Data = D, Error = E> + Send + Sync + 'static,
+        B: Body<Data = D> + Send + Sync + 'static,
+        B::Error: std::error::Error + Send + Sync,
         D: Buf,
     {
         Self {
-            inner: Box::pin(body),
+            inner: Box::pin(body.map_err(|err| Box::new(err) as _)),
         }
     }
 }
 
-impl<D, E> fmt::Debug for BoxBody<D, E> {
+impl<D> fmt::Debug for BoxBody<D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "BoxBody")
     }
 }
 
-impl<D, E> Body for BoxBody<D, E>
+impl<D> Body for BoxBody<D>
 where
     D: Buf,
 {
     type Data = D;
-    type Error = E;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
 
     fn poll_data(
         mut self: Pin<&mut Self>,
