@@ -13,11 +13,13 @@
 //!
 //! [`Body`]: trait.Body.html
 
+mod empty;
 mod next;
 mod size_hint;
 
 pub mod combinators;
 
+pub use self::empty::Empty;
 pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
 

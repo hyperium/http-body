@@ -1,6 +1,11 @@
 # Unreleased
 
-- Add `BodyExt` that provides a variety of convenient adapters.
+- Add combinators to `Body`:
+  - `map_data`: Change the `Data` chunks produced by the body.
+  - `map_err`: Change the `Error`s produced by the body.
+  - `boxed`: Convert the `Body` into a boxed trait object.
+  - `into_stream`: Convert the `Body` into a `Stream`.
+- Add `Empty`.
 
 # 0.4.0 (December 23, 2020)
 
