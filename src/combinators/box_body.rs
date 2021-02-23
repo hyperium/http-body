@@ -34,7 +34,7 @@ impl<D> BoxBody<D> {
 
 impl<D> fmt::Debug for BoxBody<D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "BoxBody")
+        f.debug_struct("BoxBody").finish()
     }
 }
 
