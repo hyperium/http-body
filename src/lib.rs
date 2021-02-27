@@ -23,7 +23,7 @@ pub use self::empty::Empty;
 pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
 
-use self::combinators::{BoxBody, IntoStream, MapData, MapErr};
+use self::combinators::{BoxBody, MapData, MapErr};
 use bytes::Buf;
 use http::HeaderMap;
 use std::ops;
@@ -119,18 +119,6 @@ pub trait Body {
         Self: Sized + Send + Sync + 'static,
     {
         BoxBody::new(self)
-    }
-
-    /// Turn this body into a [`Stream`].
-    ///
-    /// Note that this disgards any trailers the body might have.
-    ///
-    /// [`Stream`]: https://docs.rs/futures/latest/futures/stream/trait.Stream.html
-    fn into_stream(self) -> IntoStream<Self>
-    where
-        Self: Sized,
-    {
-        IntoStream::new(self)
     }
 }
 

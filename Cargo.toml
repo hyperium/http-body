@@ -29,4 +29,3 @@ categories = ["web-programming"]
 bytes = "1"
 http = "0.2"
 pin-project-lite = "0.2"
-futures-core = "0.3"
