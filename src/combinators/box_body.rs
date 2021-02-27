@@ -1,4 +1,4 @@
-use crate::Body;
+use crate::{Body, BoxError};
 use bytes::Buf;
 use std::{
     fmt,
@@ -8,14 +8,7 @@ use std::{
 
 /// A boxed [`Body`] trait object.
 pub struct BoxBody<D> {
-    inner: Pin<
-        Box<
-            dyn Body<Data = D, Error = Box<dyn std::error::Error + Send + Sync>>
-                + Send
-                + Sync
-                + 'static,
-        >,
-    >,
+    inner: Pin<Box<dyn Body<Data = D, Error = BoxError> + Send + Sync + 'static>>,
 }
 
 impl<D> BoxBody<D> {
@@ -23,11 +16,11 @@ impl<D> BoxBody<D> {
     pub fn new<B>(body: B) -> Self
     where
         B: Body<Data = D> + Send + Sync + 'static,
-        B::Error: std::error::Error + Send + Sync,
+        B::Error: Into<BoxError>,
         D: Buf,
     {
         Self {
-            inner: Box::pin(body.map_err(|err| Box::new(err) as _)),
+            inner: Box::pin(body.map_err(Into::into)),
         }
     }
 }
@@ -43,7 +36,7 @@ where
     D: Buf,
 {
     type Data = D;
-    type Error = Box<dyn std::error::Error + Send + Sync>;
+    type Error = BoxError;
 
     fn poll_data(
         mut self: Pin<&mut Self>,

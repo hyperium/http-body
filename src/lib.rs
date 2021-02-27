@@ -30,6 +30,8 @@ use std::ops;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
 /// Trait representing a streaming body of a Request or Response.
 ///
 /// Data is streamed via the `poll_data` function, which asynchronously yields `T: Buf` values. The
