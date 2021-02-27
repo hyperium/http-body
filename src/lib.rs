@@ -30,8 +30,6 @@ use std::ops;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-type BoxError = Box<dyn std::error::Error + Send + Sync>;
-
 /// Trait representing a streaming body of a Request or Response.
 ///
 /// Data is streamed via the `poll_data` function, which asynchronously yields `T: Buf` values. The
@@ -116,10 +114,9 @@ pub trait Body {
     }
 
     /// Turn this body into a boxed trait object.
-    fn boxed(self) -> BoxBody<Self::Data>
+    fn boxed(self) -> BoxBody<Self::Data, Self::Error>
     where
         Self: Sized + Send + Sync + 'static,
-        Self::Error: std::error::Error + Send + Sync,
     {
         BoxBody::new(self)
     }
