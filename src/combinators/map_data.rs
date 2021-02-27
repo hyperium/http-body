@@ -77,8 +77,4 @@ where
     fn is_end_stream(&self) -> bool {
         self.inner.is_end_stream()
     }
-
-    fn size_hint(&self) -> crate::SizeHint {
-        self.inner.size_hint()
-    }
 }
