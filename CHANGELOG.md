@@ -1,5 +1,9 @@
 # Unreleased
 
+Nothing.
+
+# 0.4.1 (March 18, 2021)
+
 - Add combinators to `Body`:
   - `map_data`: Change the `Data` chunks produced by the body.
   - `map_err`: Change the `Error`s produced by the body.

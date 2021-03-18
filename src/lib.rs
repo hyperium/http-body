@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/http-body/0.4.0")]
+#![doc(html_root_url = "https://docs.rs/http-body/0.4.1")]
 #![deny(
     missing_debug_implementations,
     missing_docs,
