@@ -1,6 +1,6 @@
 # Unreleased
 
-Nothing.
+- Fix docs links for `map_data` and `map_err`.
 
 # 0.4.1 (March 18, 2021)
 

@@ -9,7 +9,7 @@ use std::{
 pin_project! {
     /// Body returned by the [`map_data`] combinator.
     ///
-    /// [`map_data`]: crate::util::BodyExt::map_data
+    /// [`map_data`]: crate::Body::map_data
     #[derive(Debug, Clone, Copy)]
     pub struct MapData<B, F> {
         #[pin]
