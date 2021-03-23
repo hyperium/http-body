@@ -1,6 +1,7 @@
 # Unreleased
 
-Nothing.
+- Add `Full` which is a `Body` that consists of a single chunk.
+- Add `AsyncReadBody` which turns an `AsyncRead` into a `Body`.
 
 # 0.4.1 (March 18, 2021)
 
