@@ -1,21 +1,23 @@
 use crate::{Body, SizeHint};
 use bytes::{Buf, Bytes};
 use http::HeaderMap;
+use pin_project_lite::pin_project;
 use std::borrow::Cow;
 use std::convert::{Infallible, TryFrom};
-use std::marker::Unpin;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-/// A body that consists of a single chunk.
-#[derive(Clone, Copy, Debug)]
-pub struct Full<D> {
-    data: Option<D>,
+pin_project! {
+    /// A body that consists of a single chunk.
+    #[derive(Clone, Copy, Debug)]
+    pub struct Full<D> {
+        data: Option<D>,
+    }
 }
 
 impl<D> Full<D>
 where
-    D: Buf + Unpin,
+    D: Buf,
 {
     /// Create a new `Full`.
     pub fn new(data: D) -> Self {
@@ -30,7 +32,7 @@ where
 
 impl<D> Body for Full<D>
 where
-    D: Buf + Unpin,
+    D: Buf,
 {
     type Data = D;
     type Error = Infallible;
@@ -71,7 +73,7 @@ where
 
 impl<D> Default for Full<D>
 where
-    D: Buf + Unpin,
+    D: Buf,
 {
     /// Create an empty `Full`.
     fn default() -> Self {
@@ -81,7 +83,7 @@ where
 
 impl<D> From<Bytes> for Full<D>
 where
-    D: Buf + From<Bytes> + Unpin,
+    D: Buf + From<Bytes>,
 {
     fn from(bytes: Bytes) -> Self {
         Full::new(D::from(bytes))
@@ -90,7 +92,7 @@ where
 
 impl<D> From<Vec<u8>> for Full<D>
 where
-    D: Buf + From<Vec<u8>> + Unpin,
+    D: Buf + From<Vec<u8>>,
 {
     fn from(vec: Vec<u8>) -> Self {
         Full::new(D::from(vec))
@@ -99,7 +101,7 @@ where
 
 impl<D> From<&'static [u8]> for Full<D>
 where
-    D: Buf + From<&'static [u8]> + Unpin,
+    D: Buf + From<&'static [u8]>,
 {
     fn from(slice: &'static [u8]) -> Self {
         Full::new(D::from(slice))
@@ -108,7 +110,7 @@ where
 
 impl<D, B> From<Cow<'static, B>> for Full<D>
 where
-    D: Buf + From<&'static B> + From<B::Owned> + Unpin,
+    D: Buf + From<&'static B> + From<B::Owned>,
     B: ToOwned + ?Sized,
 {
     fn from(cow: Cow<'static, B>) -> Self {
@@ -121,7 +123,7 @@ where
 
 impl<D> From<String> for Full<D>
 where
-    D: Buf + From<String> + Unpin,
+    D: Buf + From<String>,
 {
     fn from(s: String) -> Self {
         Full::new(D::from(s))
@@ -130,7 +132,7 @@ where
 
 impl<D> From<&'static str> for Full<D>
 where
-    D: Buf + From<&'static str> + Unpin,
+    D: Buf + From<&'static str>,
 {
     fn from(slice: &'static str) -> Self {
         Full::new(D::from(slice))
