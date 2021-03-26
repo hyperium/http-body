@@ -58,15 +58,7 @@ where
     fn size_hint(&self) -> SizeHint {
         self.data
             .as_ref()
-            .map(|data| {
-                u64::try_from(data.remaining())
-                    .map(SizeHint::with_exact)
-                    .unwrap_or_else(|_| {
-                        let mut hint = SizeHint::new();
-                        hint.set_lower(u64::MAX);
-                        hint
-                    })
-            })
+            .map(|data| SizeHint::with_exact(u64::try_from(data.remaining()).unwrap()))
             .unwrap_or_else(|| SizeHint::with_exact(0))
     }
 }
