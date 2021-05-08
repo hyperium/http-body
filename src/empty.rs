@@ -1,4 +1,4 @@
-use super::Body;
+use super::{Body, SizeHint};
 use bytes::Buf;
 use http::HeaderMap;
 use std::{
@@ -39,6 +39,14 @@ impl<D: Buf> Body for Empty<D> {
         _cx: &mut Context<'_>,
     ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
         Poll::Ready(Ok(None))
+    }
+
+    fn is_end_stream(&self) -> bool {
+        true
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        SizeHint::with_exact(0)
     }
 }
 

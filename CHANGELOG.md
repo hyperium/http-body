@@ -1,6 +1,6 @@
 # Unreleased
 
-Nothing.
+- Correctly override `Body::size_hint` and `Body::is_end_stream` for `Empty`.
 
 # 0.4.1 (March 18, 2021)
 
