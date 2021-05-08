@@ -1,6 +1,11 @@
 # Unreleased
 
+None.
+
+# 0.4.2 (May 8, 2021)
+
 - Correctly override `Body::size_hint` and `Body::is_end_stream` for `Empty`.
+- Add `Full` which is a body that consists of a single chunk.
 
 # 0.4.1 (March 18, 2021)
 
