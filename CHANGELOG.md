@@ -1,6 +1,6 @@
 # Unreleased
 
-None.
+- Make `Full` and `Empty` work for any error type.
 
 # 0.4.2 (May 8, 2021)
 
