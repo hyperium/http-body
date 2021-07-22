@@ -59,3 +59,12 @@ where
         self.inner.size_hint()
     }
 }
+
+impl<D, E> Default for BoxBody<D, E>
+where
+    D: Buf + 'static,
+{
+    fn default() -> Self {
+        BoxBody::new(crate::Empty::new().map_err(|err| match err {}))
+    }
+}
