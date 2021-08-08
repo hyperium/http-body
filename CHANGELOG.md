@@ -1,6 +1,6 @@
 # Unreleased
 
-None.
+- Implement `Default` for `BoxBody`.
 
 # 0.4.2 (May 8, 2021)
 
