@@ -2,6 +2,8 @@ use crate::Body;
 use bytes::Buf;
 use pin_project_lite::pin_project;
 use std::{
+    any::type_name,
+    fmt,
     pin::Pin,
     task::{Context, Poll},
 };
@@ -10,7 +12,7 @@ pin_project! {
     /// Body returned by the [`map_data`] combinator.
     ///
     /// [`map_data`]: crate::util::BodyExt::map_data
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Clone, Copy)]
     pub struct MapData<B, F> {
         #[pin]
         inner: B,
@@ -76,5 +78,17 @@ where
 
     fn is_end_stream(&self) -> bool {
         self.inner.is_end_stream()
+    }
+}
+
+impl<B, F> fmt::Debug for MapData<B, F>
+where
+    B: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("MapData")
+            .field("inner", &self.inner)
+            .field("f", &type_name::<F>())
+            .finish()
     }
 }

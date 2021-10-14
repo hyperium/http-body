@@ -1,6 +1,8 @@
 use crate::Body;
 use pin_project_lite::pin_project;
 use std::{
+    any::type_name,
+    fmt,
     pin::Pin,
     task::{Context, Poll},
 };
@@ -9,7 +11,7 @@ pin_project! {
     /// Body returned by the [`map_err`] combinator.
     ///
     /// [`map_err`]: crate::util::BodyExt::map_err
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Clone, Copy)]
     pub struct MapErr<B, F> {
         #[pin]
         inner: B,
@@ -79,5 +81,17 @@ where
 
     fn size_hint(&self) -> crate::SizeHint {
         self.inner.size_hint()
+    }
+}
+
+impl<B, F> fmt::Debug for MapErr<B, F>
+where
+    B: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("MapErr")
+            .field("inner", &self.inner)
+            .field("f", &type_name::<F>())
+            .finish()
     }
 }
