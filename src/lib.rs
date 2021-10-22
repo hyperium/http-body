@@ -25,7 +25,7 @@ pub use self::full::Full;
 pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
 
-use self::combinators::{BoxBody, MapData, MapErr};
+use self::combinators::{BoxBody, MapData, MapErr, UnsyncBoxBody};
 use bytes::Buf;
 use http::HeaderMap;
 use std::ops;
@@ -121,6 +121,14 @@ pub trait Body {
         Self: Sized + Send + Sync + 'static,
     {
         BoxBody::new(self)
+    }
+
+    /// Turn this body into a boxed trait object that is !Sync.
+    fn boxed_unsync(self) -> UnsyncBoxBody<Self::Data, Self::Error>
+    where
+        Self: Sized + Send + 'static,
+    {
+        UnsyncBoxBody::new(self)
     }
 }
 
