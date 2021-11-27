@@ -132,3 +132,9 @@ where
         UnsyncBoxBody::new(crate::Empty::new().map_err(|err| match err {}))
     }
 }
+
+impl<D, E> From<BoxBody<D, E>> for UnsyncBoxBody<D, E> {
+    fn from(body: BoxBody<D, E>) -> Self {
+        Self { inner: body.inner }
+    }
+}
