@@ -29,6 +29,7 @@ categories = ["web-programming"]
 bytes = "1"
 http = "0.2"
 pin-project-lite = "0.2"
+pin-utils = "0.1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
