@@ -70,9 +70,8 @@ fn is_end_stream_default_false() {
         size_hint: SizeHint::default(),
     };
 
-    assert_eq!(
-        false,
-        Pin::new(&mut mock).is_end_stream(),
+    assert!(
+        !Pin::new(&mut mock).is_end_stream(),
         "size_hint = {:?}",
         mock.size_hint.clone()
     );

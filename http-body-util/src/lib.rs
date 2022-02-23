@@ -2,7 +2,7 @@
     missing_debug_implementations,
     missing_docs,
     unreachable_pub,
-    broken_intra_doc_links
+    rustdoc::broken_intra_doc_links
 )]
 #![cfg_attr(test, deny(warnings))]
 
