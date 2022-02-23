@@ -1,6 +1,6 @@
-use crate::{Body, SizeHint};
 use bytes::{Buf, Bytes};
 use http::HeaderMap;
+use http_body::{Body, SizeHint};
 use pin_project_lite::pin_project;
 use std::borrow::Cow;
 use std::convert::{Infallible, TryFrom};

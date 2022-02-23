@@ -13,21 +13,12 @@
 //!
 //! [`Body`]: trait.Body.html
 
-mod empty;
-mod full;
-mod limited;
 mod next;
 mod size_hint;
 
-pub mod combinators;
-
-pub use self::empty::Empty;
-pub use self::full::Full;
-pub use self::limited::{LengthLimitError, Limited};
 pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
 
-use self::combinators::{BoxBody, MapData, MapErr, UnsyncBoxBody};
 use bytes::{Buf, Bytes};
 use http::HeaderMap;
 use std::convert::Infallible;
@@ -97,41 +88,6 @@ pub trait Body {
         Self: Unpin + Sized,
     {
         Trailers(self)
-    }
-
-    /// Maps this body's data value to a different value.
-    fn map_data<F, B>(self, f: F) -> MapData<Self, F>
-    where
-        Self: Sized,
-        F: FnMut(Self::Data) -> B,
-        B: Buf,
-    {
-        MapData::new(self, f)
-    }
-
-    /// Maps this body's error value to a different value.
-    fn map_err<F, E>(self, f: F) -> MapErr<Self, F>
-    where
-        Self: Sized,
-        F: FnMut(Self::Error) -> E,
-    {
-        MapErr::new(self, f)
-    }
-
-    /// Turn this body into a boxed trait object.
-    fn boxed(self) -> BoxBody<Self::Data, Self::Error>
-    where
-        Self: Sized + Send + Sync + 'static,
-    {
-        BoxBody::new(self)
-    }
-
-    /// Turn this body into a boxed trait object that is !Sync.
-    fn boxed_unsync(self) -> UnsyncBoxBody<Self::Data, Self::Error>
-    where
-        Self: Sized + Send + 'static,
-    {
-        UnsyncBoxBody::new(self)
     }
 }
 

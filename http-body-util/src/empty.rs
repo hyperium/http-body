@@ -1,6 +1,6 @@
-use super::{Body, SizeHint};
 use bytes::Buf;
 use http::HeaderMap;
+use http_body::{Body, SizeHint};
 use std::{
     convert::Infallible,
     fmt,

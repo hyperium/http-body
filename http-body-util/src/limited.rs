@@ -1,6 +1,6 @@
-use crate::{Body, SizeHint};
 use bytes::Buf;
 use http::HeaderMap;
+use http_body::{Body, SizeHint};
 use pin_project_lite::pin_project;
 use std::error::Error;
 use std::fmt;

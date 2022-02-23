@@ -1,5 +1,7 @@
-use crate::Body;
+use crate::BodyExt as _;
+
 use bytes::Buf;
+use http_body::{Body, SizeHint};
 use std::{
     fmt,
     pin::Pin,
@@ -60,7 +62,7 @@ where
         self.inner.is_end_stream()
     }
 
-    fn size_hint(&self) -> crate::SizeHint {
+    fn size_hint(&self) -> SizeHint {
         self.inner.size_hint()
     }
 }
@@ -119,7 +121,7 @@ where
         self.inner.is_end_stream()
     }
 
-    fn size_hint(&self) -> crate::SizeHint {
+    fn size_hint(&self) -> SizeHint {
         self.inner.size_hint()
     }
 }
