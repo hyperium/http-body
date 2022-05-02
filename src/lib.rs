@@ -307,6 +307,14 @@ impl Body for String {
     ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
         Poll::Ready(Ok(None))
     }
+
+    fn is_end_stream(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        SizeHint::with_exact(self.len() as u64)
+    }
 }
 
 #[cfg(test)]
