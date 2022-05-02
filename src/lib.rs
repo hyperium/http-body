@@ -28,6 +28,8 @@ pub use self::size_hint::SizeHint;
 use self::combinators::{BoxBody, MapData, MapErr, UnsyncBoxBody};
 use bytes::Buf;
 use http::HeaderMap;
+use std::collections::VecDeque;
+use std::convert::Infallible;
 use std::ops;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -280,6 +282,30 @@ impl<B: Body> Body for http::Response<B> {
 
     fn size_hint(&self) -> SizeHint {
         self.body().size_hint()
+    }
+}
+
+impl Body for String {
+    type Data = VecDeque<u8>;
+    type Error = Infallible;
+
+    fn poll_data(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        if !self.is_empty() {
+            let s = std::mem::take(&mut *self);
+            Poll::Ready(Some(Ok(s.into_bytes().into())))
+        } else {
+            Poll::Ready(None)
+        }
+    }
+
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+        Poll::Ready(Ok(None))
     }
 }
 
