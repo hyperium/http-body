@@ -26,9 +26,8 @@ pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
 
 use self::combinators::{BoxBody, MapData, MapErr, UnsyncBoxBody};
-use bytes::Buf;
+use bytes::{Buf, Bytes};
 use http::HeaderMap;
-use std::collections::VecDeque;
 use std::convert::Infallible;
 use std::ops;
 use std::pin::Pin;
@@ -286,7 +285,7 @@ impl<B: Body> Body for http::Response<B> {
 }
 
 impl Body for String {
-    type Data = VecDeque<u8>;
+    type Data = Bytes;
     type Error = Infallible;
 
     fn poll_data(
