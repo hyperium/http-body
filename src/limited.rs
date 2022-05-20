@@ -1,19 +1,23 @@
 use crate::{Body, SizeHint};
 use bytes::Buf;
 use http::HeaderMap;
+use pin_project_lite::pin_project;
 use std::error::Error;
 use std::fmt;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-/// A length limited body.
-///
-/// This body will return an error if more than the configured number
-/// of bytes are returned on polling the wrapped body.
-#[derive(Clone, Copy, Debug)]
-pub struct Limited<B> {
-    remaining: usize,
-    inner: B,
+pin_project! {
+    /// A length limited body.
+    ///
+    /// This body will return an error if more than the configured number
+    /// of bytes are returned on polling the wrapped body.
+    #[derive(Clone, Copy, Debug)]
+    pub struct Limited<B> {
+        remaining: usize,
+        #[pin]
+        inner: B,
+    }
 }
 
 impl<B> Limited<B> {
@@ -28,29 +32,30 @@ impl<B> Limited<B> {
 
 impl<B> Body for Limited<B>
 where
-    B: Body + Unpin,
+    B: Body,
+    B::Error: Into<Box<dyn Error + Send + Sync>>,
 {
     type Data = B::Data;
-    type Error = LengthLimitError<B::Error>;
+    type Error = Box<dyn Error + Send + Sync>;
 
     fn poll_data(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-        let mut this = self;
-        let res = match Pin::new(&mut this.inner).poll_data(cx) {
+        let this = self.project();
+        let res = match this.inner.poll_data(cx) {
             Poll::Pending => return Poll::Pending,
             Poll::Ready(None) => None,
             Poll::Ready(Some(Ok(data))) => {
-                if data.remaining() > this.remaining {
-                    this.remaining = 0;
-                    Some(Err(LengthLimitError::LengthLimitExceeded))
+                if data.remaining() > *this.remaining {
+                    *this.remaining = 0;
+                    Some(Err(LengthLimitError.into()))
                 } else {
-                    this.remaining -= data.remaining();
+                    *this.remaining -= data.remaining();
                     Some(Ok(data))
                 }
             }
-            Poll::Ready(Some(Err(err))) => Some(Err(LengthLimitError::Other(err))),
+            Poll::Ready(Some(Err(err))) => Some(Err(err.into())),
         };
 
         Poll::Ready(res)
@@ -60,11 +65,11 @@ where
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        let mut this = self;
-        let res = match Pin::new(&mut this.inner).poll_trailers(cx) {
+        let this = self.project();
+        let res = match this.inner.poll_trailers(cx) {
             Poll::Pending => return Poll::Pending,
             Poll::Ready(Ok(data)) => Ok(data),
-            Poll::Ready(Err(err)) => Err(LengthLimitError::Other(err)),
+            Poll::Ready(Err(err)) => Err(err.into()),
         };
 
         Poll::Ready(res)
@@ -93,38 +98,18 @@ where
     }
 }
 
-/// An error returned when reading from a [`Limited`] body.
+/// An error returned when body length exceeds the configured limit.
 #[derive(Debug)]
-pub enum LengthLimitError<E> {
-    /// The body exceeded the length limit.
-    LengthLimitExceeded,
-    /// Some other error was encountered while reading from the underlying body.
-    Other(E),
-}
+#[non_exhaustive]
+pub struct LengthLimitError;
 
-impl<E> fmt::Display for LengthLimitError<E>
-where
-    E: fmt::Display,
-{
+impl fmt::Display for LengthLimitError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::LengthLimitExceeded => f.write_str("length limit exceeded"),
-            Self::Other(err) => err.fmt(f),
-        }
+        f.write_str("length limit exceeded")
     }
 }
 
-impl<E> Error for LengthLimitError<E>
-where
-    E: Error,
-{
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::LengthLimitExceeded => None,
-            Self::Other(err) => err.source(),
-        }
-    }
-}
+impl Error for LengthLimitError {}
 
 #[cfg(test)]
 mod tests {
@@ -162,7 +147,7 @@ mod tests {
         assert_eq!(body.size_hint().upper(), hint.upper());
 
         let error = body.data().await.unwrap().unwrap_err();
-        assert!(matches!(error, LengthLimitError::LengthLimitExceeded));
+        assert!(matches!(error.downcast_ref(), Some(LengthLimitError)));
     }
 
     struct Chunky(&'static [&'static [u8]]);
@@ -211,7 +196,7 @@ mod tests {
         assert_eq!(body.size_hint().upper(), hint.upper());
 
         let error = body.data().await.unwrap().unwrap_err();
-        assert!(matches!(error, LengthLimitError::LengthLimitExceeded));
+        assert!(matches!(error.downcast_ref(), Some(LengthLimitError)));
     }
 
     #[tokio::test]
@@ -225,7 +210,7 @@ mod tests {
         assert_eq!(body.size_hint().upper(), hint.upper());
 
         let error = body.data().await.unwrap().unwrap_err();
-        assert!(matches!(error, LengthLimitError::LengthLimitExceeded));
+        assert!(matches!(error.downcast_ref(), Some(LengthLimitError)));
     }
 
     #[tokio::test]
@@ -260,10 +245,19 @@ mod tests {
         assert_eq!(trailers, Some(HeaderMap::new()))
     }
 
+    #[derive(Debug)]
     enum ErrorBodyError {
         Data,
         Trailers,
     }
+
+    impl fmt::Display for ErrorBodyError {
+        fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
+            Ok(())
+        }
+    }
+
+    impl Error for ErrorBodyError {}
 
     struct ErrorBody;
 
@@ -290,10 +284,7 @@ mod tests {
     async fn read_for_body_returning_error_propagates_error() {
         let body = &mut Limited::new(ErrorBody, 8);
         let error = body.data().await.unwrap().unwrap_err();
-        assert!(matches!(
-            error,
-            LengthLimitError::Other(ErrorBodyError::Data)
-        ));
+        assert!(matches!(error.downcast_ref(), Some(ErrorBodyError::Data)));
     }
 
     #[tokio::test]
@@ -301,8 +292,8 @@ mod tests {
         let body = &mut Limited::new(ErrorBody, 8);
         let error = body.trailers().await.unwrap_err();
         assert!(matches!(
-            error,
-            LengthLimitError::Other(ErrorBodyError::Trailers)
+            error.downcast_ref(),
+            Some(ErrorBodyError::Trailers)
         ));
     }
 }
