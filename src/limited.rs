@@ -69,3 +69,37 @@ where
         self.project().inner.poll_trailers(cx).map_err(|e| e.into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Limited;
+    use crate::{Body, Full};
+    use bytes::{BufMut, Bytes, BytesMut};
+
+    #[tokio::test]
+    async fn over_limit() {
+        let body = Full::new(Bytes::from(vec![0u8; 4096]));
+        let limited_body = Limited::new(body, 2048);
+
+        assert!(to_bytes(limited_body).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn under_limit() {
+        let body = Full::new(Bytes::from(vec![0u8; 4096]));
+        let limited_body = Limited::new(body, 8192);
+
+        assert!(to_bytes(limited_body).await.is_ok());
+    }
+
+    async fn to_bytes<B: Body>(body: B) -> Result<Bytes, B::Error> {
+        tokio::pin!(body);
+
+        let mut bytes = BytesMut::new();
+        while let Some(result) = body.data().await {
+            bytes.put(result?);
+        }
+
+        Ok(bytes.freeze())
+    }
+}
