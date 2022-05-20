@@ -8,34 +8,25 @@ use std::task::{Context, Poll};
 
 /// A length limited body.
 ///
-/// This body will return an error if more than `N` bytes are returned
-/// on polling the wrapped body.
+/// This body will return an error if more than the configured number
+/// of bytes are returned on polling the wrapped body.
 #[derive(Clone, Copy, Debug)]
-pub struct Limited<B, const N: usize> {
+pub struct Limited<B> {
     remaining: usize,
     inner: B,
 }
 
-impl<B> Limited<B, 0> {
+impl<B> Limited<B> {
     /// Create a new `Limited`.
-    pub fn new<const N: usize>(inner: B) -> Limited<B, N> {
-        Limited {
-            remaining: N,
+    pub fn new(inner: B, limit: usize) -> Self {
+        Self {
+            remaining: limit,
             inner,
         }
     }
 }
 
-impl<B, const N: usize> Default for Limited<B, N>
-where
-    B: Default,
-{
-    fn default() -> Self {
-        Limited::new(B::default())
-    }
-}
-
-impl<B, const N: usize> Body for Limited<B, N>
+impl<B> Body for Limited<B>
 where
     B: Body + Unpin,
 {
@@ -85,7 +76,7 @@ where
 
     fn size_hint(&self) -> SizeHint {
         use std::convert::TryFrom;
-        match u64::try_from(N) {
+        match u64::try_from(self.remaining) {
             Ok(n) => {
                 let mut hint = self.inner.size_hint();
                 if hint.lower() >= n {
@@ -146,9 +137,17 @@ mod tests {
     async fn read_for_body_under_limit_returns_data() {
         const DATA: &[u8] = b"testing";
         let inner = Full::new(Bytes::from(DATA));
-        let body = &mut Limited::new::<8>(inner);
+        let body = &mut Limited::new(inner, 8);
+
+        let mut hint = SizeHint::new();
+        hint.set_upper(7);
+        assert_eq!(body.size_hint().upper(), hint.upper());
+
         let data = body.data().await.unwrap().unwrap();
         assert_eq!(data, DATA);
+        hint.set_upper(0);
+        assert_eq!(body.size_hint().upper(), hint.upper());
+
         assert!(matches!(body.data().await, None));
     }
 
@@ -156,7 +155,12 @@ mod tests {
     async fn read_for_body_over_limit_returns_error() {
         const DATA: &[u8] = b"testing a string that is too long";
         let inner = Full::new(Bytes::from(DATA));
-        let body = &mut Limited::new::<8>(inner);
+        let body = &mut Limited::new(inner, 8);
+
+        let mut hint = SizeHint::new();
+        hint.set_upper(8);
+        assert_eq!(body.size_hint().upper(), hint.upper());
+
         let error = body.data().await.unwrap().unwrap_err();
         assert!(matches!(error, LengthLimitError::LengthLimitExceeded));
     }
@@ -195,9 +199,17 @@ mod tests {
     ) {
         const DATA: &[&[u8]] = &[b"testing ", b"a string that is too long"];
         let inner = Chunky(DATA);
-        let body = &mut Limited::new::<8>(inner);
+        let body = &mut Limited::new(inner, 8);
+
+        let mut hint = SizeHint::new();
+        hint.set_upper(8);
+        assert_eq!(body.size_hint().upper(), hint.upper());
+
         let data = body.data().await.unwrap().unwrap();
         assert_eq!(data, DATA[0]);
+        hint.set_upper(0);
+        assert_eq!(body.size_hint().upper(), hint.upper());
+
         let error = body.data().await.unwrap().unwrap_err();
         assert!(matches!(error, LengthLimitError::LengthLimitExceeded));
     }
@@ -206,7 +218,12 @@ mod tests {
     async fn read_for_chunked_body_over_limit_on_first_chunk_returns_error() {
         const DATA: &[&[u8]] = &[b"testing a string", b" that is too long"];
         let inner = Chunky(DATA);
-        let body = &mut Limited::new::<8>(inner);
+        let body = &mut Limited::new(inner, 8);
+
+        let mut hint = SizeHint::new();
+        hint.set_upper(8);
+        assert_eq!(body.size_hint().upper(), hint.upper());
+
         let error = body.data().await.unwrap().unwrap_err();
         assert!(matches!(error, LengthLimitError::LengthLimitExceeded));
     }
@@ -215,11 +232,22 @@ mod tests {
     async fn read_for_chunked_body_under_limit_is_okay() {
         const DATA: &[&[u8]] = &[b"test", b"ing!"];
         let inner = Chunky(DATA);
-        let body = &mut Limited::new::<8>(inner);
+        let body = &mut Limited::new(inner, 8);
+
+        let mut hint = SizeHint::new();
+        hint.set_upper(8);
+        assert_eq!(body.size_hint().upper(), hint.upper());
+
         let data = body.data().await.unwrap().unwrap();
         assert_eq!(data, DATA[0]);
+        hint.set_upper(4);
+        assert_eq!(body.size_hint().upper(), hint.upper());
+
         let data = body.data().await.unwrap().unwrap();
         assert_eq!(data, DATA[1]);
+        hint.set_upper(0);
+        assert_eq!(body.size_hint().upper(), hint.upper());
+
         assert!(matches!(body.data().await, None));
     }
 
@@ -227,7 +255,7 @@ mod tests {
     async fn read_for_trailers_propagates_inner_trailers() {
         const DATA: &[&[u8]] = &[b"test", b"ing!"];
         let inner = Chunky(DATA);
-        let body = &mut Limited::new::<8>(inner);
+        let body = &mut Limited::new(inner, 8);
         let trailers = body.trailers().await.unwrap();
         assert_eq!(trailers, Some(HeaderMap::new()))
     }
@@ -260,7 +288,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_for_body_returning_error_propagates_error() {
-        let body = &mut Limited::new::<8>(ErrorBody);
+        let body = &mut Limited::new(ErrorBody, 8);
         let error = body.data().await.unwrap().unwrap_err();
         assert!(matches!(
             error,
@@ -270,7 +298,7 @@ mod tests {
 
     #[tokio::test]
     async fn trailers_for_body_returning_error_propagates_error() {
-        let body = &mut Limited::new::<8>(ErrorBody);
+        let body = &mut Limited::new(ErrorBody, 8);
         let error = body.trailers().await.unwrap_err();
         assert!(matches!(
             error,
