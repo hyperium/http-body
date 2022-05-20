@@ -4,6 +4,7 @@ use crate::{Body, SizeHint};
 use bytes::Buf;
 use pin_project_lite::pin_project;
 use std::{
+    fmt,
     pin::Pin,
     task::{Context, Poll},
 };
@@ -48,7 +49,7 @@ where
             Poll::Ready(Some(Ok(data))) => {
                 if data.remaining() > *this.remaining {
                     *this.remaining = 0;
-                    Some(Err("length limit exceeded".into()))
+                    Some(Err(LengthLimitError::new().into()))
                 } else {
                     *this.remaining -= data.remaining();
                     Some(Ok(data))
@@ -66,7 +67,7 @@ where
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
-        self.project().inner.poll_trailers(cx).map_err(|e| e.into())
+        self.project().inner.poll_trailers(cx).map_err(Into::into)
     }
 
     fn is_end_stream(&self) -> bool {
@@ -91,6 +92,24 @@ where
         }
     }
 }
+
+/// An error returned when reading from a [`Limited`] body.
+#[derive(Debug)]
+pub struct LengthLimitError {}
+
+impl LengthLimitError {
+    pub(crate) fn new() -> Self {
+        Self {}
+    }
+}
+
+impl fmt::Display for LengthLimitError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("length limit exceeded")
+    }
+}
+
+impl std::error::Error for LengthLimitError {}
 
 #[cfg(test)]
 mod tests {

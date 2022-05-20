@@ -23,7 +23,7 @@ pub mod combinators;
 
 pub use self::empty::Empty;
 pub use self::full::Full;
-pub use self::limited::Limited;
+pub use self::limited::{Limited, LengthLimitError};
 pub use self::next::{Data, Trailers};
 pub use self::size_hint::SizeHint;
 
