@@ -68,6 +68,10 @@ where
     ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
         self.project().inner.poll_trailers(cx).map_err(|e| e.into())
     }
+
+    fn is_end_stream(&self) -> bool {
+        self.inner.is_end_stream()
+    }
 }
 
 #[cfg(test)]
