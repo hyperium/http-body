@@ -114,8 +114,13 @@ impl std::error::Error for LengthLimitError {}
 #[cfg(test)]
 mod tests {
     use super::Limited;
-    use crate::{Body, Full};
+    use crate::{Body, Full, SizeHint};
     use bytes::{BufMut, Bytes, BytesMut};
+    use std::{
+        convert::Infallible,
+        pin::Pin,
+        task::{Context, Poll},
+    };
 
     #[tokio::test]
     async fn over_limit() {
@@ -131,6 +136,64 @@ mod tests {
         let limited_body = Limited::new(body, 8192);
 
         assert!(to_bytes(limited_body).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn size_hint() {
+        const CHUNK: [u8; 8] = [0u8; 8];
+
+        enum TestBody {
+            Empty,
+            Half,
+            Full,
+        }
+
+        impl Body for TestBody {
+            type Data = Bytes;
+            type Error = Infallible;
+
+            fn poll_data(
+                mut self: Pin<&mut Self>,
+                _cx: &mut Context<'_>,
+            ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+                match *self {
+                    Self::Empty => self.set(Self::Half),
+                    Self::Half => self.set(Self::Full),
+                    Self::Full => return Poll::Ready(None),
+                }
+
+                Poll::Ready(Some(Ok(CHUNK.to_vec().into())))
+            }
+
+            fn poll_trailers(
+                self: Pin<&mut Self>,
+                _cx: &mut Context<'_>,
+            ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
+                unimplemented!()
+            }
+
+            fn size_hint(&self) -> SizeHint {
+                match self {
+                    Self::Empty => SizeHint::with_exact((CHUNK.len() * 2) as u64),
+                    Self::Half => SizeHint::with_exact(CHUNK.len() as u64),
+                    Self::Full => SizeHint::with_exact(0),
+                }
+            }
+        }
+
+        let mut body = TestBody::Empty;
+
+        assert_eq!(body.size_hint().upper().unwrap(), (CHUNK.len() * 2) as u64);
+
+        let data = body.data().await.unwrap().unwrap();
+        assert_eq!(data, CHUNK.to_vec());
+
+        assert_eq!(body.size_hint().upper().unwrap(), CHUNK.len() as u64);
+
+        let data = body.data().await.unwrap().unwrap();
+        assert_eq!(data, CHUNK.to_vec());
+
+        assert_eq!(body.size_hint().upper().unwrap(), 0);
     }
 
     async fn to_bytes<B: Body>(body: B) -> Result<Bytes, B::Error> {
