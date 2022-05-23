@@ -1,5 +1,4 @@
-use crate::Body;
-use bytes::Buf;
+use http_body::{Body, SizeHint};
 use pin_project_lite::pin_project;
 use std::{
     any::type_name,
@@ -9,18 +8,18 @@ use std::{
 };
 
 pin_project! {
-    /// Body returned by the [`map_data`] combinator.
+    /// Body returned by the [`map_err`] combinator.
     ///
-    /// [`map_data`]: crate::util::BodyExt::map_data
+    /// [`map_err`]: crate::util::BodyExt::map_err
     #[derive(Clone, Copy)]
-    pub struct MapData<B, F> {
+    pub struct MapErr<B, F> {
         #[pin]
         inner: B,
         f: F
     }
 }
 
-impl<B, F> MapData<B, F> {
+impl<B, F> MapErr<B, F> {
     #[inline]
     pub(crate) fn new(body: B, f: F) -> Self {
         Self { inner: body, f }
@@ -47,14 +46,13 @@ impl<B, F> MapData<B, F> {
     }
 }
 
-impl<B, F, B2> Body for MapData<B, F>
+impl<B, F, E> Body for MapErr<B, F>
 where
     B: Body,
-    F: FnMut(B::Data) -> B2,
-    B2: Buf,
+    F: FnMut(B::Error) -> E,
 {
-    type Data = B2;
-    type Error = B::Error;
+    type Data = B::Data;
+    type Error = E;
 
     fn poll_data(
         self: Pin<&mut Self>,
@@ -64,8 +62,8 @@ where
         match this.inner.poll_data(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(None) => Poll::Ready(None),
-            Poll::Ready(Some(Ok(data))) => Poll::Ready(Some(Ok((this.f)(data)))),
-            Poll::Ready(Some(Err(err))) => Poll::Ready(Some(Err(err))),
+            Poll::Ready(Some(Ok(data))) => Poll::Ready(Some(Ok(data))),
+            Poll::Ready(Some(Err(err))) => Poll::Ready(Some(Err((this.f)(err)))),
         }
     }
 
@@ -73,20 +71,25 @@ where
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
-        self.project().inner.poll_trailers(cx)
+        let this = self.project();
+        this.inner.poll_trailers(cx).map_err(this.f)
     }
 
     fn is_end_stream(&self) -> bool {
         self.inner.is_end_stream()
     }
+
+    fn size_hint(&self) -> SizeHint {
+        self.inner.size_hint()
+    }
 }
 
-impl<B, F> fmt::Debug for MapData<B, F>
+impl<B, F> fmt::Debug for MapErr<B, F>
 where
     B: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("MapData")
+        f.debug_struct("MapErr")
             .field("inner", &self.inner)
             .field("f", &type_name::<F>())
             .finish()
