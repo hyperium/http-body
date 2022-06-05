@@ -1,9 +1,19 @@
+use std::error::Error;
+use std::fmt::{Debug, Display, Formatter};
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
-use crate::either::proj::EitherProj;
+use bytes::Buf;
+use http::HeaderMap;
+use http_body::{Body, SizeHint};
+use proj::EitherProj;
 
+/// sum type with two cases: `Left` and `Right`, used if a body can be one of two distinct types.
+#[derive(Debug)]
 pub enum Either<L, R> {
+    /// A value of type `L`
     Left(L),
+    /// A value of type `R`
     Right(R),
 }
 
@@ -11,13 +21,174 @@ impl<L, R> Either<L, R> {
     pub(crate) fn project(self: Pin<&mut Self>) -> EitherProj<L, R> {
         unsafe {
             match self.get_unchecked_mut() {
-                Self::Left(left) => EitherProj::Left {
-                    left: Pin::new_unchecked(left),
-                },
-                Self::Right(right) => EitherProj::Right {
-                    right: Pin::new_unchecked(right),
-                },
+                Self::Left(left) => EitherProj::Left(Pin::new_unchecked(left)),
+                Self::Right(right) => EitherProj::Right(Pin::new_unchecked(right)),
             }
+        }
+    }
+
+    /// Flip the values, `Left` -> `Right` and `Right` -> `Left`
+    pub fn flip(self) -> Either<R, L> {
+        match self {
+            Either::Left(left) => Either::Right(left),
+            Either::Right(right) => Either::Left(right),
+        }
+    }
+
+    /// Apply the function `f` to the left variant, if present.
+    pub fn map_left<F: FnOnce(L) -> T, T>(self, f: F) -> Either<T, R> {
+        match self {
+            Either::Left(left) => Either::Left(f(left)),
+            Either::Right(right) => Either::Right(right),
+        }
+    }
+
+    /// Apply the function `g` to the right variant, if present.
+    pub fn map_right<F: FnOnce(R) -> T, T>(self, f: F) -> Either<L, T> {
+        match self {
+            Either::Left(left) => Either::Left(left),
+            Either::Right(right) => Either::Right(f(right)),
+        }
+    }
+
+    /// Apply the function `f` to the left variant, or the function `g` to the right variant.
+    pub fn map<F: FnOnce(L) -> T, T, G: FnOnce(R) -> U, U>(self, f: F, g: G) -> Either<T, U> {
+        match self {
+            Either::Left(left) => Either::Left(f(left)),
+            Either::Right(right) => Either::Right(g(right)),
+        }
+    }
+
+    /// Apply, depending on the current variant, the function `f`
+    /// on the left variant or the function `g` on the right variant and return their result.
+    pub fn either<F: FnOnce(L) -> T, G: FnOnce(R) -> T, T>(self, f: F, g: G) -> T {
+        match self {
+            Either::Left(left) => f(left),
+            Either::Right(right) => g(right),
+        }
+    }
+
+    /// Convert `&Either<L, R>` into `Either<&L, &R>`
+    pub fn as_ref(&self) -> Either<&L, &R> {
+        match self {
+            Either::Left(left) => Either::Left(left),
+            Either::Right(right) => Either::Right(right),
+        }
+    }
+}
+
+impl<L> Either<L, L> {
+    /// Convert [`Either`] into the inner type, if both `Left` and `Right` are of the same type.
+    pub fn into_inner(self) -> L {
+        match self {
+            Either::Left(left) => left,
+            Either::Right(right) => right,
+        }
+    }
+}
+
+impl<L, R> From<Result<L, R>> for Either<L, R> {
+    fn from(value: Result<L, R>) -> Self {
+        match value {
+            Ok(ok) => Either::Left(ok),
+            Err(err) => Either::Right(err),
+        }
+    }
+}
+
+impl<L, R> From<Either<L, R>> for Result<L, R> {
+    fn from(value: Either<L, R>) -> Self {
+        match value {
+            Either::Left(left) => Ok(left),
+            Either::Right(right) => Err(right),
+        }
+    }
+}
+
+impl<L: Display, R: Display> Display for Either<L, R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Either::Left(left) => Display::fmt(left, f),
+            Either::Right(right) => Display::fmt(right, f),
+        }
+    }
+}
+
+impl<L: Error, R: Error> Error for Either<L, R> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Either::Left(left) => left.source(),
+            Either::Right(right) => right.source(),
+        }
+    }
+}
+
+impl<L: Buf, R: Buf> Buf for Either<L, R> {
+    fn remaining(&self) -> usize {
+        match self {
+            Either::Left(left) => left.remaining(),
+            Either::Right(right) => right.remaining(),
+        }
+    }
+
+    fn chunk(&self) -> &[u8] {
+        match self {
+            Either::Left(left) => left.chunk(),
+            Either::Right(right) => right.chunk(),
+        }
+    }
+
+    fn advance(&mut self, cnt: usize) {
+        match self {
+            Either::Left(left) => left.advance(cnt),
+            Either::Right(right) => right.advance(cnt),
+        }
+    }
+}
+
+impl<L: Body, R: Body> Body for Either<L, R> {
+    type Data = Either<L::Data, R::Data>;
+    type Error = Either<L::Error, R::Error>;
+
+    fn poll_data(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+        match self.project() {
+            EitherProj::Left(left) => left
+                .poll_data(cx)
+                .map(|poll| poll.map(|opt| opt.map(Either::Left).map_err(Either::Left))),
+            EitherProj::Right(right) => right
+                .poll_data(cx)
+                .map(|poll| poll.map(|opt| opt.map(Either::Right).map_err(Either::Right))),
+        }
+    }
+
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+        match self.project() {
+            EitherProj::Left(left) => left
+                .poll_trailers(cx)
+                .map(|poll| poll.map_err(Either::Left)),
+            EitherProj::Right(right) => right
+                .poll_trailers(cx)
+                .map(|poll| poll.map_err(Either::Right)),
+        }
+    }
+
+    fn is_end_stream(&self) -> bool {
+        match self {
+            Either::Left(left) => left.is_end_stream(),
+            Either::Right(right) => right.is_end_stream(),
+        }
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        match self {
+            Either::Left(left) => left.size_hint(),
+            Either::Right(right) => right.size_hint(),
         }
     }
 }
@@ -41,6 +212,7 @@ pub(crate) mod proj {
     //!
     //! [pin-project-lite]: https://docs.rs/pin-project-lite/latest/pin_project_lite/
     use std::marker::PhantomData;
+    use std::pin::Pin;
 
     use super::Either;
 
@@ -55,12 +227,8 @@ pub(crate) mod proj {
     where
         Either<L, R>: '__pin,
     {
-        Left {
-            left: ::pin_project_lite::__private::Pin<&'__pin mut (L)>,
-        },
-        Right {
-            right: ::pin_project_lite::__private::Pin<&'__pin mut (R)>,
-        },
+        Left(Pin<&'__pin mut L>),
+        Right(Pin<&'__pin mut R>),
     }
 
     #[allow(single_use_lifetimes)]
