@@ -9,7 +9,7 @@ use http_body::{Body, SizeHint};
 use proj::EitherProj;
 
 /// sum type with two cases: `Left` and `Right`, used if a body can be one of two distinct types.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Either<L, R> {
     /// A value of type `L`
     Left(L),
@@ -249,4 +249,111 @@ pub(crate) mod proj {
         impl<T: Drop> MustNotImplDrop for T {}
         impl<L, R> MustNotImplDrop for Either<L, R> {}
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Empty, Full};
+
+    #[tokio::test]
+    async fn data_left() {
+        let full = Full::new(&b"hello"[..]);
+
+        let mut value: Either<_, Empty<&[u8]>> = Either::Left(full);
+
+        assert_eq!(value.size_hint().exact(), Some(b"hello".len() as u64));
+        assert_eq!(value.data().await, Some(Ok(Either::Left(&b"hello"[..]))));
+        assert!(value.data().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn data_right() {
+        let full = Full::new(&b"hello!"[..]);
+
+        let mut value: Either<Empty<&[u8]>, _> = Either::Right(full);
+
+        assert_eq!(value.size_hint().exact(), Some(b"hello!".len() as u64));
+        assert_eq!(value.data().await, Some(Ok(Either::Right(&b"hello!"[..]))));
+        assert!(value.data().await.is_none());
+    }
+
+    #[test]
+    fn flip() {
+        let a = 2;
+        let b = "example";
+
+        assert_eq!(Either::<i32, &str>::Left(a).flip(), Either::Right(a));
+        assert_eq!(Either::<i32, &str>::Right(b).flip(), Either::Left(b));
+    }
+
+    #[test]
+    fn map_left() {
+        let a = 2;
+        let b = "example";
+
+        assert_eq!(
+            Either::<i32, &str>::Left(a).map_left(|a| a + 2),
+            Either::Left(4)
+        );
+        assert_eq!(
+            Either::<i32, &str>::Right(b).map_left(|a| a + 2),
+            Either::Right(b)
+        );
+    }
+
+    #[test]
+    fn map_right() {
+        let a = 2;
+        let b = "example";
+
+        assert_eq!(
+            Either::<i32, &str>::Left(a).map_right(|_| "hi"),
+            Either::Left(2)
+        );
+        assert_eq!(
+            Either::<i32, &str>::Right(b).map_right(|_| "hi"),
+            Either::Right("hi")
+        );
+    }
+
+    #[test]
+    fn map() {
+        let a = 2;
+        let b = "example";
+
+        assert_eq!(
+            Either::<i32, &str>::Left(a).map(|a| a + 2, |_| "hi"),
+            Either::Left(4)
+        );
+        assert_eq!(
+            Either::<i32, &str>::Right(b).map(|a| a + 2, |_| "hi"),
+            Either::Right("hi")
+        );
+    }
+
+    #[test]
+    fn either() {
+        let a = 2;
+        let b = "example";
+
+        assert_eq!(Either::<usize, &str>::Left(a).either(|a| a, |b| b.len()), a);
+        assert_eq!(
+            Either::<usize, &str>::Right(b).either(|a| a, |b| b.len()),
+            b.len()
+        );
+    }
+
+    #[test]
+    fn as_ref() {
+        let a = &Either::<i32, u8>::Left(2);
+
+        assert_eq!(a.as_ref(), Either::<&i32, &u8>::Left(&2));
+    }
+
+    #[test]
+    fn into_inner() {
+        let a = Either::<i32, i32>::Left(2);
+        assert_eq!(a.into_inner(), 2)
+    }
 }
