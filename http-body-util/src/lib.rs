@@ -13,11 +13,13 @@
 //! [`Empty`] and [`Full`] provide simple implementations.
 
 pub mod combinators;
+mod either;
 mod empty;
 mod full;
 mod limited;
 
 use self::combinators::{BoxBody, MapData, MapErr, UnsyncBoxBody};
+pub use self::either::Either;
 pub use self::empty::Empty;
 pub use self::full::Full;
 pub use self::limited::{LengthLimitError, Limited};
