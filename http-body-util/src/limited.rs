@@ -150,13 +150,17 @@ mod tests {
         assert!(matches!(error.downcast_ref(), Some(LengthLimitError)));
     }
 
-    fn body_from_iter<I>(into_iter: I) -> StreamBody<Bytes, Infallible>
+    fn body_from_iter<I>(into_iter: I) -> impl Body<Data = Bytes, Error = Infallible>
     where
         I: IntoIterator,
         I::Item: Into<Bytes> + 'static,
         I::IntoIter: Send + 'static,
     {
-        let iter = into_iter.into_iter().map(Into::into).map(Ok);
+        let iter = into_iter
+            .into_iter()
+            .map(Into::into)
+            .map(Ok::<_, Infallible>);
+
         StreamBody::new(futures_util::stream::iter(iter))
     }
 

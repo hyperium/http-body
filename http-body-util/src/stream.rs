@@ -1,39 +1,42 @@
 use bytes::Buf;
-use futures_util::stream::{BoxStream, Stream};
+use futures_util::stream::Stream;
 use http::HeaderMap;
 use http_body::Body;
+use pin_project_lite::pin_project;
 use std::{
-    fmt,
     pin::Pin,
     task::{Context, Poll},
 };
 
-/// A body created from a `Stream`.
-pub struct StreamBody<D, E> {
-    stream: BoxStream<'static, Result<D, E>>,
-}
-
-impl<D, E> StreamBody<D, E> {
-    /// Create a new `StreamBody`.
-    pub fn new<S>(stream: S) -> Self
-    where
-        S: Stream<Item = Result<D, E>> + Send + 'static,
-    {
-        Self {
-            stream: Box::pin(stream),
-        }
+pin_project! {
+    /// A body created from a `Stream`.
+    #[derive(Debug)]
+    pub struct StreamBody<S> {
+        #[pin]
+        stream: S,
     }
 }
 
-impl<D: Buf, E> Body for StreamBody<D, E> {
+impl<S> StreamBody<S> {
+    /// Create a new `StreamBody`.
+    pub fn new(stream: S) -> Self {
+        Self { stream }
+    }
+}
+
+impl<S, D, E> Body for StreamBody<S>
+where
+    S: Stream<Item = Result<D, E>>,
+    D: Buf,
+{
     type Data = D;
     type Error = E;
 
     fn poll_data(
-        mut self: Pin<&mut Self>,
+        self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-        self.stream.as_mut().poll_next(cx)
+        self.project().stream.poll_next(cx)
     }
 
     fn poll_trailers(
@@ -41,12 +44,6 @@ impl<D: Buf, E> Body for StreamBody<D, E> {
         _cx: &mut Context<'_>,
     ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
         Poll::Ready(Ok(None))
-    }
-}
-
-impl<D, E> fmt::Debug for StreamBody<D, E> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("StreamBody").finish()
     }
 }
 
