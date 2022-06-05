@@ -10,7 +10,7 @@ use std::{
 
 pin_project! {
     /// A body created from a `Stream`.
-    #[derive(Debug)]
+    #[derive(Clone, Copy, Debug)]
     pub struct StreamBody<S> {
         #[pin]
         stream: S,
@@ -44,6 +44,18 @@ where
         _cx: &mut Context<'_>,
     ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
         Poll::Ready(Ok(None))
+    }
+}
+
+impl<S: Stream> Stream for StreamBody<S> {
+    type Item = S::Item;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.project().stream.poll_next(cx)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.stream.size_hint()
     }
 }
 
