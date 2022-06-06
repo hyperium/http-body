@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
@@ -9,7 +9,7 @@ use http_body::{Body, SizeHint};
 use proj::EitherProj;
 
 /// sum type with two cases: `Left` and `Right`, used if a body can be one of two distinct types.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub enum Either<L, R> {
     /// A value of type `L`
     Left(L),
@@ -26,55 +26,6 @@ impl<L, R> Either<L, R> {
             }
         }
     }
-
-    /// Flip the values, `Left` -> `Right` and `Right` -> `Left`
-    pub fn flip(self) -> Either<R, L> {
-        match self {
-            Either::Left(left) => Either::Right(left),
-            Either::Right(right) => Either::Left(right),
-        }
-    }
-
-    /// Apply the function `f` to the left variant, if present.
-    pub fn map_left<F: FnOnce(L) -> T, T>(self, f: F) -> Either<T, R> {
-        match self {
-            Either::Left(left) => Either::Left(f(left)),
-            Either::Right(right) => Either::Right(right),
-        }
-    }
-
-    /// Apply the function `g` to the right variant, if present.
-    pub fn map_right<F: FnOnce(R) -> T, T>(self, f: F) -> Either<L, T> {
-        match self {
-            Either::Left(left) => Either::Left(left),
-            Either::Right(right) => Either::Right(f(right)),
-        }
-    }
-
-    /// Apply the function `f` to the left variant, or the function `g` to the right variant.
-    pub fn map<F: FnOnce(L) -> T, T, G: FnOnce(R) -> U, U>(self, f: F, g: G) -> Either<T, U> {
-        match self {
-            Either::Left(left) => Either::Left(f(left)),
-            Either::Right(right) => Either::Right(g(right)),
-        }
-    }
-
-    /// Apply, depending on the current variant, the function `f`
-    /// on the left variant or the function `g` on the right variant and return their result.
-    pub fn either<F: FnOnce(L) -> T, G: FnOnce(R) -> T, T>(self, f: F, g: G) -> T {
-        match self {
-            Either::Left(left) => f(left),
-            Either::Right(right) => g(right),
-        }
-    }
-
-    /// Convert `&Either<L, R>` into `Either<&L, &R>`
-    pub fn as_ref(&self) -> Either<&L, &R> {
-        match self {
-            Either::Left(left) => Either::Left(left),
-            Either::Right(right) => Either::Right(right),
-        }
-    }
 }
 
 impl<L> Either<L, L> {
@@ -87,68 +38,16 @@ impl<L> Either<L, L> {
     }
 }
 
-impl<L, R> From<Result<L, R>> for Either<L, R> {
-    fn from(value: Result<L, R>) -> Self {
-        match value {
-            Ok(ok) => Either::Left(ok),
-            Err(err) => Either::Right(err),
-        }
-    }
-}
-
-impl<L, R> From<Either<L, R>> for Result<L, R> {
-    fn from(value: Either<L, R>) -> Self {
-        match value {
-            Either::Left(left) => Ok(left),
-            Either::Right(right) => Err(right),
-        }
-    }
-}
-
-impl<L: Display, R: Display> Display for Either<L, R> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Either::Left(left) => Display::fmt(left, f),
-            Either::Right(right) => Display::fmt(right, f),
-        }
-    }
-}
-
-impl<L: Error, R: Error> Error for Either<L, R> {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Either::Left(left) => left.source(),
-            Either::Right(right) => right.source(),
-        }
-    }
-}
-
-impl<L: Buf, R: Buf> Buf for Either<L, R> {
-    fn remaining(&self) -> usize {
-        match self {
-            Either::Left(left) => left.remaining(),
-            Either::Right(right) => right.remaining(),
-        }
-    }
-
-    fn chunk(&self) -> &[u8] {
-        match self {
-            Either::Left(left) => left.chunk(),
-            Either::Right(right) => right.chunk(),
-        }
-    }
-
-    fn advance(&mut self, cnt: usize) {
-        match self {
-            Either::Left(left) => left.advance(cnt),
-            Either::Right(right) => right.advance(cnt),
-        }
-    }
-}
-
-impl<L: Body, R: Body> Body for Either<L, R> {
-    type Data = Either<L::Data, R::Data>;
-    type Error = Either<L::Error, R::Error>;
+impl<L, R, Data> Body for Either<L, R>
+where
+    L: Body<Data = Data>,
+    R: Body<Data = Data>,
+    L::Error: Into<Box<dyn Error + Send + Sync>>,
+    R::Error: Into<Box<dyn Error + Send + Sync>>,
+    Data: Buf,
+{
+    type Data = Data;
+    type Error = Box<dyn Error + Send + Sync>;
 
     fn poll_data(
         self: Pin<&mut Self>,
@@ -157,10 +56,10 @@ impl<L: Body, R: Body> Body for Either<L, R> {
         match self.project() {
             EitherProj::Left(left) => left
                 .poll_data(cx)
-                .map(|poll| poll.map(|opt| opt.map(Either::Left).map_err(Either::Left))),
+                .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
             EitherProj::Right(right) => right
                 .poll_data(cx)
-                .map(|poll| poll.map(|opt| opt.map(Either::Right).map_err(Either::Right))),
+                .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
         }
     }
 
@@ -169,12 +68,10 @@ impl<L: Body, R: Body> Body for Either<L, R> {
         cx: &mut Context<'_>,
     ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
         match self.project() {
-            EitherProj::Left(left) => left
-                .poll_trailers(cx)
-                .map(|poll| poll.map_err(Either::Left)),
-            EitherProj::Right(right) => right
-                .poll_trailers(cx)
-                .map(|poll| poll.map_err(Either::Right)),
+            EitherProj::Left(left) => left.poll_trailers(cx).map(|poll| poll.map_err(Into::into)),
+            EitherProj::Right(right) => {
+                right.poll_trailers(cx).map(|poll| poll.map_err(Into::into))
+            }
         }
     }
 
@@ -263,7 +160,7 @@ mod tests {
         let mut value: Either<_, Empty<&[u8]>> = Either::Left(full);
 
         assert_eq!(value.size_hint().exact(), Some(b"hello".len() as u64));
-        assert_eq!(value.data().await, Some(Ok(Either::Left(&b"hello"[..]))));
+        assert_eq!(value.data().await.unwrap().unwrap(), &b"hello"[..]);
         assert!(value.data().await.is_none());
     }
 
@@ -274,81 +171,8 @@ mod tests {
         let mut value: Either<Empty<&[u8]>, _> = Either::Right(full);
 
         assert_eq!(value.size_hint().exact(), Some(b"hello!".len() as u64));
-        assert_eq!(value.data().await, Some(Ok(Either::Right(&b"hello!"[..]))));
+        assert_eq!(value.data().await.unwrap().unwrap(), &b"hello!"[..]);
         assert!(value.data().await.is_none());
-    }
-
-    #[test]
-    fn flip() {
-        let a = 2;
-        let b = "example";
-
-        assert_eq!(Either::<i32, &str>::Left(a).flip(), Either::Right(a));
-        assert_eq!(Either::<i32, &str>::Right(b).flip(), Either::Left(b));
-    }
-
-    #[test]
-    fn map_left() {
-        let a = 2;
-        let b = "example";
-
-        assert_eq!(
-            Either::<i32, &str>::Left(a).map_left(|a| a + 2),
-            Either::Left(4)
-        );
-        assert_eq!(
-            Either::<i32, &str>::Right(b).map_left(|a| a + 2),
-            Either::Right(b)
-        );
-    }
-
-    #[test]
-    fn map_right() {
-        let a = 2;
-        let b = "example";
-
-        assert_eq!(
-            Either::<i32, &str>::Left(a).map_right(|_| "hi"),
-            Either::Left(2)
-        );
-        assert_eq!(
-            Either::<i32, &str>::Right(b).map_right(|_| "hi"),
-            Either::Right("hi")
-        );
-    }
-
-    #[test]
-    fn map() {
-        let a = 2;
-        let b = "example";
-
-        assert_eq!(
-            Either::<i32, &str>::Left(a).map(|a| a + 2, |_| "hi"),
-            Either::Left(4)
-        );
-        assert_eq!(
-            Either::<i32, &str>::Right(b).map(|a| a + 2, |_| "hi"),
-            Either::Right("hi")
-        );
-    }
-
-    #[test]
-    fn either() {
-        let a = 2;
-        let b = "example";
-
-        assert_eq!(Either::<usize, &str>::Left(a).either(|a| a, |b| b.len()), a);
-        assert_eq!(
-            Either::<usize, &str>::Right(b).either(|a| a, |b| b.len()),
-            b.len()
-        );
-    }
-
-    #[test]
-    fn as_ref() {
-        let a = &Either::<i32, u8>::Left(2);
-
-        assert_eq!(a.as_ref(), Either::<&i32, &u8>::Left(&2));
     }
 
     #[test]
