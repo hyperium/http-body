@@ -4,6 +4,7 @@
     unreachable_pub,
     rustdoc::broken_intra_doc_links
 )]
+#![cfg_attr(docsrs, feature(doc_auto_cfg, doc_cfg))]
 #![cfg_attr(test, deny(warnings))]
 
 //! Utilities for [`http_body::Body`].
@@ -18,11 +19,17 @@ mod full;
 mod limited;
 mod stream;
 
+#[cfg(feature = "tokio")]
+mod throttle;
+
 use self::combinators::{BoxBody, MapData, MapErr, UnsyncBoxBody};
 pub use self::empty::Empty;
 pub use self::full::Full;
 pub use self::limited::{LengthLimitError, Limited};
 pub use self::stream::StreamBody;
+
+#[cfg(feature = "tokio")]
+pub use self::throttle::Throttle;
 
 /// An extension trait for [`http_body::Body`] adding various combinators and adapters
 pub trait BodyExt: http_body::Body {
