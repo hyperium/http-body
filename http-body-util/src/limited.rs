@@ -114,7 +114,7 @@ impl Error for LengthLimitError {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Full;
+    use crate::{Full, StreamBody};
     use bytes::Bytes;
     use std::convert::Infallible;
 
@@ -150,40 +150,25 @@ mod tests {
         assert!(matches!(error.downcast_ref(), Some(LengthLimitError)));
     }
 
-    struct Chunky(&'static [&'static [u8]]);
+    fn body_from_iter<I>(into_iter: I) -> impl Body<Data = Bytes, Error = Infallible>
+    where
+        I: IntoIterator,
+        I::Item: Into<Bytes> + 'static,
+        I::IntoIter: Send + 'static,
+    {
+        let iter = into_iter
+            .into_iter()
+            .map(Into::into)
+            .map(Ok::<_, Infallible>);
 
-    impl Body for Chunky {
-        type Data = &'static [u8];
-        type Error = Infallible;
-
-        fn poll_data(
-            self: Pin<&mut Self>,
-            _cx: &mut Context<'_>,
-        ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-            let mut this = self;
-            match this.0.split_first().map(|(&head, tail)| (Ok(head), tail)) {
-                Some((data, new_tail)) => {
-                    this.0 = new_tail;
-
-                    Poll::Ready(Some(data))
-                }
-                None => Poll::Ready(None),
-            }
-        }
-
-        fn poll_trailers(
-            self: Pin<&mut Self>,
-            _cx: &mut Context<'_>,
-        ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-            Poll::Ready(Ok(Some(HeaderMap::new())))
-        }
+        StreamBody::new(futures_util::stream::iter(iter))
     }
 
     #[tokio::test]
     async fn read_for_chunked_body_around_limit_returns_first_chunk_but_returns_error_on_over_limit_chunk(
     ) {
-        const DATA: &[&[u8]] = &[b"testing ", b"a string that is too long"];
-        let inner = Chunky(DATA);
+        const DATA: [&[u8]; 2] = [b"testing ", b"a string that is too long"];
+        let inner = body_from_iter(DATA);
         let body = &mut Limited::new(inner, 8);
 
         let mut hint = SizeHint::new();
@@ -201,8 +186,8 @@ mod tests {
 
     #[tokio::test]
     async fn read_for_chunked_body_over_limit_on_first_chunk_returns_error() {
-        const DATA: &[&[u8]] = &[b"testing a string", b" that is too long"];
-        let inner = Chunky(DATA);
+        const DATA: [&[u8]; 2] = [b"testing a string", b" that is too long"];
+        let inner = body_from_iter(DATA);
         let body = &mut Limited::new(inner, 8);
 
         let mut hint = SizeHint::new();
@@ -215,8 +200,8 @@ mod tests {
 
     #[tokio::test]
     async fn read_for_chunked_body_under_limit_is_okay() {
-        const DATA: &[&[u8]] = &[b"test", b"ing!"];
-        let inner = Chunky(DATA);
+        const DATA: [&[u8]; 2] = [b"test", b"ing!"];
+        let inner = body_from_iter(DATA);
         let body = &mut Limited::new(inner, 8);
 
         let mut hint = SizeHint::new();
@@ -236,11 +221,30 @@ mod tests {
         assert!(matches!(body.data().await, None));
     }
 
+    struct SomeTrailers;
+
+    impl Body for SomeTrailers {
+        type Data = Bytes;
+        type Error = Infallible;
+
+        fn poll_data(
+            self: Pin<&mut Self>,
+            _cx: &mut Context<'_>,
+        ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+            Poll::Ready(None)
+        }
+
+        fn poll_trailers(
+            self: Pin<&mut Self>,
+            _cx: &mut Context<'_>,
+        ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
+            Poll::Ready(Ok(Some(HeaderMap::new())))
+        }
+    }
+
     #[tokio::test]
     async fn read_for_trailers_propagates_inner_trailers() {
-        const DATA: &[&[u8]] = &[b"test", b"ing!"];
-        let inner = Chunky(DATA);
-        let body = &mut Limited::new(inner, 8);
+        let body = &mut Limited::new(SomeTrailers, 8);
         let trailers = body.trailers().await.unwrap();
         assert_eq!(trailers, Some(HeaderMap::new()))
     }
