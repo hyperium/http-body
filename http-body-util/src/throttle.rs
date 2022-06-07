@@ -126,8 +126,8 @@ mod tests {
     use crate::{StreamBody, Throttle};
     use bytes::Bytes;
     use http_body::Body;
-    use tokio::time::Instant;
     use std::{convert::Infallible, time::Duration};
+    use tokio::time::Instant;
 
     #[tokio::test(start_paused = true)]
     async fn per_second_256() {
