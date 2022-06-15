@@ -16,11 +16,13 @@ pub mod combinators;
 mod empty;
 mod full;
 mod limited;
+mod stream;
 
 use self::combinators::{BoxBody, MapData, MapErr, UnsyncBoxBody};
 pub use self::empty::Empty;
 pub use self::full::Full;
 pub use self::limited::{LengthLimitError, Limited};
+pub use self::stream::StreamBody;
 
 /// An extension trait for [`http_body::Body`] adding various combinators and adapters
 pub trait BodyExt: http_body::Body {
