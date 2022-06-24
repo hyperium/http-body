@@ -43,12 +43,6 @@ impl<L> Either<L, L> {
     }
 }
 
-impl<L> Into<L> for Either<L, L> {
-    fn into(self) -> L {
-        self.into_inner()
-    }
-}
-
 impl<L, R, Data> Body for Either<L, R>
 where
     L: Body<Data = Data>,
