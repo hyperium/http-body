@@ -1,6 +1,5 @@
 use bytes::Buf;
-use http::HeaderMap;
-use http_body::{Body, SizeHint};
+use http_body::{Body, Frame, SizeHint};
 use std::{
     convert::Infallible,
     fmt,
@@ -26,19 +25,11 @@ impl<D: Buf> Body for Empty<D> {
     type Error = Infallible;
 
     #[inline]
-    fn poll_data(
+    fn poll_frame(
         self: Pin<&mut Self>,
         _cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         Poll::Ready(None)
-    }
-
-    #[inline]
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        Poll::Ready(Ok(None))
     }
 
     fn is_end_stream(&self) -> bool {

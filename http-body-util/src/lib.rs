@@ -19,7 +19,7 @@ mod full;
 mod limited;
 mod stream;
 
-use self::combinators::{BoxBody, MapData, MapErr, UnsyncBoxBody};
+use self::combinators::{BoxBody, MapErr, MapFrame, UnsyncBoxBody};
 pub use self::either::Either;
 pub use self::empty::Empty;
 pub use self::full::Full;
@@ -28,14 +28,22 @@ pub use self::stream::StreamBody;
 
 /// An extension trait for [`http_body::Body`] adding various combinators and adapters
 pub trait BodyExt: http_body::Body {
-    /// Maps this body's data value to a different value.
-    fn map_data<F, B>(self, f: F) -> MapData<Self, F>
+    /// Returns a future that resolves to the next `Frame`, if any.
+    fn frame(&mut self) -> combinators::Frame<'_, Self>
+    where
+        Self: Unpin,
+    {
+        combinators::Frame(self)
+    }
+
+    /// Maps this body's frame to a different kind.
+    fn map_frame<F, B>(self, f: F) -> MapFrame<Self, F>
     where
         Self: Sized,
-        F: FnMut(Self::Data) -> B,
+        F: FnMut(http_body::Frame<Self::Data>) -> http_body::Frame<B>,
         B: bytes::Buf,
     {
-        MapData::new(self, f)
+        MapFrame::new(self, f)
     }
 
     /// Maps this body's error value to a different value.

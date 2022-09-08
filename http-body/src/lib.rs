@@ -13,14 +13,13 @@
 //!
 //! [`Body`]: trait.Body.html
 
-mod next;
+mod frame;
 mod size_hint;
 
-pub use self::next::{Data, Trailers};
+pub use self::frame::Frame;
 pub use self::size_hint::SizeHint;
 
 use bytes::{Buf, Bytes};
-use http::HeaderMap;
 use std::convert::Infallible;
 use std::ops;
 use std::pin::Pin;
@@ -42,18 +41,10 @@ pub trait Body {
     type Error;
 
     /// Attempt to pull out the next data buffer of this stream.
-    fn poll_data(
+    fn poll_frame(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>>;
-
-    /// Poll for an optional **single** `HeaderMap` of trailers.
-    ///
-    /// This function should only be called once `poll_data` returns `None`.
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>>;
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>>;
 
     /// Returns `true` when the end of stream has been reached.
     ///
@@ -73,40 +64,17 @@ pub trait Body {
     fn size_hint(&self) -> SizeHint {
         SizeHint::default()
     }
-
-    /// Returns future that resolves to next data chunk, if any.
-    fn data(&mut self) -> Data<'_, Self>
-    where
-        Self: Unpin + Sized,
-    {
-        Data(self)
-    }
-
-    /// Returns future that resolves to trailers, if any.
-    fn trailers(&mut self) -> Trailers<'_, Self>
-    where
-        Self: Unpin + Sized,
-    {
-        Trailers(self)
-    }
 }
 
 impl<T: Body + Unpin + ?Sized> Body for &mut T {
     type Data = T::Data;
     type Error = T::Error;
 
-    fn poll_data(
+    fn poll_frame(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-        Pin::new(&mut **self).poll_data(cx)
-    }
-
-    fn poll_trailers(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        Pin::new(&mut **self).poll_trailers(cx)
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        Pin::new(&mut **self).poll_frame(cx)
     }
 
     fn is_end_stream(&self) -> bool {
@@ -126,18 +94,11 @@ where
     type Data = <<P as ops::Deref>::Target as Body>::Data;
     type Error = <<P as ops::Deref>::Target as Body>::Error;
 
-    fn poll_data(
+    fn poll_frame(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-        Pin::get_mut(self).as_mut().poll_data(cx)
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        Pin::get_mut(self).as_mut().poll_trailers(cx)
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        Pin::get_mut(self).as_mut().poll_frame(cx)
     }
 
     fn is_end_stream(&self) -> bool {
@@ -153,18 +114,11 @@ impl<T: Body + Unpin + ?Sized> Body for Box<T> {
     type Data = T::Data;
     type Error = T::Error;
 
-    fn poll_data(
+    fn poll_frame(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-        Pin::new(&mut **self).poll_data(cx)
-    }
-
-    fn poll_trailers(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        Pin::new(&mut **self).poll_trailers(cx)
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        Pin::new(&mut **self).poll_frame(cx)
     }
 
     fn is_end_stream(&self) -> bool {
@@ -180,23 +134,13 @@ impl<B: Body> Body for http::Request<B> {
     type Data = B::Data;
     type Error = B::Error;
 
-    fn poll_data(
+    fn poll_frame(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         unsafe {
             self.map_unchecked_mut(http::Request::body_mut)
-                .poll_data(cx)
-        }
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        unsafe {
-            self.map_unchecked_mut(http::Request::body_mut)
-                .poll_trailers(cx)
+                .poll_frame(cx)
         }
     }
 
@@ -213,23 +157,13 @@ impl<B: Body> Body for http::Response<B> {
     type Data = B::Data;
     type Error = B::Error;
 
-    fn poll_data(
+    fn poll_frame(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         unsafe {
             self.map_unchecked_mut(http::Response::body_mut)
-                .poll_data(cx)
-        }
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        unsafe {
-            self.map_unchecked_mut(http::Response::body_mut)
-                .poll_trailers(cx)
+                .poll_frame(cx)
         }
     }
 
@@ -246,23 +180,16 @@ impl Body for String {
     type Data = Bytes;
     type Error = Infallible;
 
-    fn poll_data(
+    fn poll_frame(
         mut self: Pin<&mut Self>,
         _cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         if !self.is_empty() {
             let s = std::mem::take(&mut *self);
-            Poll::Ready(Some(Ok(s.into_bytes().into())))
+            Poll::Ready(Some(Ok(Frame::data(s.into_bytes().into()))))
         } else {
             Poll::Ready(None)
         }
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        Poll::Ready(Ok(None))
     }
 
     fn is_end_stream(&self) -> bool {

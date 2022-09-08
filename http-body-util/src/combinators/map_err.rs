@@ -1,4 +1,4 @@
-use http_body::{Body, SizeHint};
+use http_body::{Body, Frame, SizeHint};
 use pin_project_lite::pin_project;
 use std::{
     any::type_name,
@@ -54,25 +54,17 @@ where
     type Data = B::Data;
     type Error = E;
 
-    fn poll_data(
+    fn poll_frame(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         let this = self.project();
-        match this.inner.poll_data(cx) {
+        match this.inner.poll_frame(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(None) => Poll::Ready(None),
-            Poll::Ready(Some(Ok(data))) => Poll::Ready(Some(Ok(data))),
+            Poll::Ready(Some(Ok(frame))) => Poll::Ready(Some(Ok(frame))),
             Poll::Ready(Some(Err(err))) => Poll::Ready(Some(Err((this.f)(err)))),
         }
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
-        let this = self.project();
-        this.inner.poll_trailers(cx).map_err(this.f)
     }
 
     fn is_end_stream(&self) -> bool {

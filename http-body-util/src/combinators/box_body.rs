@@ -1,7 +1,7 @@
 use crate::BodyExt as _;
 
 use bytes::Buf;
-use http_body::{Body, SizeHint};
+use http_body::{Body, Frame, SizeHint};
 use std::{
     fmt,
     pin::Pin,
@@ -44,18 +44,11 @@ where
     type Data = D;
     type Error = E;
 
-    fn poll_data(
+    fn poll_frame(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-        self.inner.as_mut().poll_data(cx)
-    }
-
-    fn poll_trailers(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
-        self.inner.as_mut().poll_trailers(cx)
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        self.inner.as_mut().poll_frame(cx)
     }
 
     fn is_end_stream(&self) -> bool {
@@ -103,18 +96,11 @@ where
     type Data = D;
     type Error = E;
 
-    fn poll_data(
+    fn poll_frame(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-        self.inner.as_mut().poll_data(cx)
-    }
-
-    fn poll_trailers(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
-        self.inner.as_mut().poll_trailers(cx)
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        self.inner.as_mut().poll_frame(cx)
     }
 
     fn is_end_stream(&self) -> bool {

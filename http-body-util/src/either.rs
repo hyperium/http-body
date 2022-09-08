@@ -4,8 +4,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use bytes::Buf;
-use http::HeaderMap;
-use http_body::{Body, SizeHint};
+use http_body::{Body, Frame, SizeHint};
 use proj::EitherProj;
 
 /// Sum type with two cases: `Left` and `Right`, used if a body can be one of
@@ -54,29 +53,17 @@ where
     type Data = Data;
     type Error = Box<dyn Error + Send + Sync>;
 
-    fn poll_data(
+    fn poll_frame(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         match self.project() {
             EitherProj::Left(left) => left
-                .poll_data(cx)
+                .poll_frame(cx)
                 .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
             EitherProj::Right(right) => right
-                .poll_data(cx)
+                .poll_frame(cx)
                 .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
-        }
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        match self.project() {
-            EitherProj::Left(left) => left.poll_trailers(cx).map(|poll| poll.map_err(Into::into)),
-            EitherProj::Right(right) => {
-                right.poll_trailers(cx).map(|poll| poll.map_err(Into::into))
-            }
         }
     }
 
@@ -158,7 +145,7 @@ pub(crate) mod proj {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Empty, Full};
+    use crate::{BodyExt, Empty, Full};
 
     #[tokio::test]
     async fn data_left() {
@@ -167,8 +154,11 @@ mod tests {
         let mut value: Either<_, Empty<&[u8]>> = Either::Left(full);
 
         assert_eq!(value.size_hint().exact(), Some(b"hello".len() as u64));
-        assert_eq!(value.data().await.unwrap().unwrap(), &b"hello"[..]);
-        assert!(value.data().await.is_none());
+        assert_eq!(
+            value.frame().await.unwrap().unwrap().into_data().unwrap(),
+            &b"hello"[..]
+        );
+        assert!(value.frame().await.is_none());
     }
 
     #[tokio::test]
@@ -178,8 +168,11 @@ mod tests {
         let mut value: Either<Empty<&[u8]>, _> = Either::Right(full);
 
         assert_eq!(value.size_hint().exact(), Some(b"hello!".len() as u64));
-        assert_eq!(value.data().await.unwrap().unwrap(), &b"hello!"[..]);
-        assert!(value.data().await.is_none());
+        assert_eq!(
+            value.frame().await.unwrap().unwrap().into_data().unwrap(),
+            &b"hello!"[..]
+        );
+        assert!(value.frame().await.is_none());
     }
 
     #[test]
