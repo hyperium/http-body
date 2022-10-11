@@ -143,8 +143,8 @@ pub(crate) mod proj {
         #[allow(non_snake_case)]
         pub struct __Origin<'__pin, L, R> {
             __dummy_lifetime: PhantomData<&'__pin ()>,
-            Left: L,
-            Right: R,
+            _Left: L,
+            _Right: R,
         }
         impl<'__pin, L, R> Unpin for Either<L, R> where __Origin<'__pin, L, R>: Unpin {}
 
