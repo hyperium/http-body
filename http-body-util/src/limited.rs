@@ -1,6 +1,5 @@
 use bytes::Buf;
-use http::HeaderMap;
-use http_body::{Body, SizeHint};
+use http_body::{Body, Frame, SizeHint};
 use pin_project_lite::pin_project;
 use std::error::Error;
 use std::fmt;
@@ -38,38 +37,28 @@ where
     type Data = B::Data;
     type Error = Box<dyn Error + Send + Sync>;
 
-    fn poll_data(
+    fn poll_frame(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         let this = self.project();
-        let res = match this.inner.poll_data(cx) {
+        let res = match this.inner.poll_frame(cx) {
             Poll::Pending => return Poll::Pending,
             Poll::Ready(None) => None,
-            Poll::Ready(Some(Ok(data))) => {
-                if data.remaining() > *this.remaining {
-                    *this.remaining = 0;
-                    Some(Err(LengthLimitError.into()))
+            Poll::Ready(Some(Ok(frame))) => {
+                if let Some(data) = frame.data_ref() {
+                    if data.remaining() > *this.remaining {
+                        *this.remaining = 0;
+                        Some(Err(LengthLimitError.into()))
+                    } else {
+                        *this.remaining -= data.remaining();
+                        Some(Ok(frame))
+                    }
                 } else {
-                    *this.remaining -= data.remaining();
-                    Some(Ok(data))
+                    Some(Ok(frame))
                 }
             }
             Poll::Ready(Some(Err(err))) => Some(Err(err.into())),
-        };
-
-        Poll::Ready(res)
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        let this = self.project();
-        let res = match this.inner.poll_trailers(cx) {
-            Poll::Pending => return Poll::Pending,
-            Poll::Ready(Ok(data)) => Ok(data),
-            Poll::Ready(Err(err)) => Err(err.into()),
         };
 
         Poll::Ready(res)
@@ -114,7 +103,7 @@ impl Error for LengthLimitError {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Full, StreamBody};
+    use crate::{BodyExt, Full, StreamBody};
     use bytes::Bytes;
     use std::convert::Infallible;
 
@@ -128,12 +117,12 @@ mod tests {
         hint.set_upper(7);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        let data = body.data().await.unwrap().unwrap();
+        let data = body.frame().await.unwrap().unwrap().into_data().unwrap();
         assert_eq!(data, DATA);
         hint.set_upper(0);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        assert!(matches!(body.data().await, None));
+        assert!(matches!(body.frame().await, None));
     }
 
     #[tokio::test]
@@ -146,7 +135,7 @@ mod tests {
         hint.set_upper(8);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        let error = body.data().await.unwrap().unwrap_err();
+        let error = body.frame().await.unwrap().unwrap_err();
         assert!(matches!(error.downcast_ref(), Some(LengthLimitError)));
     }
 
@@ -158,7 +147,7 @@ mod tests {
     {
         let iter = into_iter
             .into_iter()
-            .map(Into::into)
+            .map(|it| Frame::data(it.into()))
             .map(Ok::<_, Infallible>);
 
         StreamBody::new(futures_util::stream::iter(iter))
@@ -175,12 +164,12 @@ mod tests {
         hint.set_upper(8);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        let data = body.data().await.unwrap().unwrap();
+        let data = body.frame().await.unwrap().unwrap().into_data().unwrap();
         assert_eq!(data, DATA[0]);
         hint.set_upper(0);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        let error = body.data().await.unwrap().unwrap_err();
+        let error = body.frame().await.unwrap().unwrap_err();
         assert!(matches!(error.downcast_ref(), Some(LengthLimitError)));
     }
 
@@ -194,7 +183,7 @@ mod tests {
         hint.set_upper(8);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        let error = body.data().await.unwrap().unwrap_err();
+        let error = body.frame().await.unwrap().unwrap_err();
         assert!(matches!(error.downcast_ref(), Some(LengthLimitError)));
     }
 
@@ -208,17 +197,17 @@ mod tests {
         hint.set_upper(8);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        let data = body.data().await.unwrap().unwrap();
+        let data = body.frame().await.unwrap().unwrap().into_data().unwrap();
         assert_eq!(data, DATA[0]);
         hint.set_upper(4);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        let data = body.data().await.unwrap().unwrap();
+        let data = body.frame().await.unwrap().unwrap().into_data().unwrap();
         assert_eq!(data, DATA[1]);
         hint.set_upper(0);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        assert!(matches!(body.data().await, None));
+        assert!(matches!(body.frame().await, None));
     }
 
     struct SomeTrailers;
@@ -227,33 +216,23 @@ mod tests {
         type Data = Bytes;
         type Error = Infallible;
 
-        fn poll_data(
+        fn poll_frame(
             self: Pin<&mut Self>,
             _cx: &mut Context<'_>,
-        ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-            Poll::Ready(None)
-        }
-
-        fn poll_trailers(
-            self: Pin<&mut Self>,
-            _cx: &mut Context<'_>,
-        ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-            Poll::Ready(Ok(Some(HeaderMap::new())))
+        ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+            Poll::Ready(Some(Ok(Frame::trailers(http::HeaderMap::new()))))
         }
     }
 
     #[tokio::test]
     async fn read_for_trailers_propagates_inner_trailers() {
         let body = &mut Limited::new(SomeTrailers, 8);
-        let trailers = body.trailers().await.unwrap();
-        assert_eq!(trailers, Some(HeaderMap::new()))
+        let frame = body.frame().await.unwrap().unwrap();
+        assert!(frame.is_trailers());
     }
 
     #[derive(Debug)]
-    enum ErrorBodyError {
-        Data,
-        Trailers,
-    }
+    struct ErrorBodyError;
 
     impl fmt::Display for ErrorBodyError {
         fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
@@ -269,35 +248,18 @@ mod tests {
         type Data = &'static [u8];
         type Error = ErrorBodyError;
 
-        fn poll_data(
+        fn poll_frame(
             self: Pin<&mut Self>,
             _cx: &mut Context<'_>,
-        ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-            Poll::Ready(Some(Err(ErrorBodyError::Data)))
-        }
-
-        fn poll_trailers(
-            self: Pin<&mut Self>,
-            _cx: &mut Context<'_>,
-        ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-            Poll::Ready(Err(ErrorBodyError::Trailers))
+        ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+            Poll::Ready(Some(Err(ErrorBodyError)))
         }
     }
 
     #[tokio::test]
     async fn read_for_body_returning_error_propagates_error() {
         let body = &mut Limited::new(ErrorBody, 8);
-        let error = body.data().await.unwrap().unwrap_err();
-        assert!(matches!(error.downcast_ref(), Some(ErrorBodyError::Data)));
-    }
-
-    #[tokio::test]
-    async fn trailers_for_body_returning_error_propagates_error() {
-        let body = &mut Limited::new(ErrorBody, 8);
-        let error = body.trailers().await.unwrap_err();
-        assert!(matches!(
-            error.downcast_ref(),
-            Some(ErrorBodyError::Trailers)
-        ));
+        let error = body.frame().await.unwrap().unwrap_err();
+        assert!(matches!(error.downcast_ref(), Some(ErrorBodyError)));
     }
 }

@@ -1,11 +1,13 @@
 //! Combinators for the `Body` trait.
 
 mod box_body;
-mod map_data;
+mod frame;
 mod map_err;
+mod map_frame;
 
 pub use self::{
     box_body::{BoxBody, UnsyncBoxBody},
-    map_data::MapData,
+    frame::Frame,
     map_err::MapErr,
+    map_frame::MapFrame,
 };

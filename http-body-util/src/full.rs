@@ -1,6 +1,5 @@
 use bytes::{Buf, Bytes};
-use http::HeaderMap;
-use http_body::{Body, SizeHint};
+use http_body::{Body, Frame, SizeHint};
 use pin_project_lite::pin_project;
 use std::borrow::Cow;
 use std::convert::{Infallible, TryFrom};
@@ -37,18 +36,11 @@ where
     type Data = D;
     type Error = Infallible;
 
-    fn poll_data(
+    fn poll_frame(
         mut self: Pin<&mut Self>,
         _cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<D, Self::Error>>> {
-        Poll::Ready(self.data.take().map(Ok))
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        Poll::Ready(Ok(None))
+    ) -> Poll<Option<Result<Frame<D>, Self::Error>>> {
+        Poll::Ready(self.data.take().map(|d| Ok(Frame::data(d))))
     }
 
     fn is_end_stream(&self) -> bool {
@@ -134,18 +126,22 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::BodyExt;
 
     #[tokio::test]
     async fn full_returns_some() {
         let mut full = Full::new(&b"hello"[..]);
         assert_eq!(full.size_hint().exact(), Some(b"hello".len() as u64));
-        assert_eq!(full.data().await, Some(Ok(&b"hello"[..])));
-        assert!(full.data().await.is_none());
+        assert_eq!(
+            full.frame().await.unwrap().unwrap().into_data().unwrap(),
+            &b"hello"[..]
+        );
+        assert!(full.frame().await.is_none());
     }
 
     #[tokio::test]
     async fn empty_full_returns_none() {
-        assert!(Full::<&[u8]>::default().data().await.is_none());
-        assert!(Full::new(&b""[..]).data().await.is_none());
+        assert!(Full::<&[u8]>::default().frame().await.is_none());
+        assert!(Full::new(&b""[..]).frame().await.is_none());
     }
 }

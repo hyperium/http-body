@@ -1,5 +1,5 @@
 use bytes::Buf;
-use http_body::Body;
+use http_body::{Body, Frame};
 use pin_project_lite::pin_project;
 use std::{
     any::type_name,
@@ -13,14 +13,14 @@ pin_project! {
     ///
     /// [`map_data`]: crate::util::BodyExt::map_data
     #[derive(Clone, Copy)]
-    pub struct MapData<B, F> {
+    pub struct MapFrame<B, F> {
         #[pin]
         inner: B,
         f: F
     }
 }
 
-impl<B, F> MapData<B, F> {
+impl<B, F> MapFrame<B, F> {
     #[inline]
     pub(crate) fn new(body: B, f: F) -> Self {
         Self { inner: body, f }
@@ -47,33 +47,26 @@ impl<B, F> MapData<B, F> {
     }
 }
 
-impl<B, F, B2> Body for MapData<B, F>
+impl<B, F, B2> Body for MapFrame<B, F>
 where
     B: Body,
-    F: FnMut(B::Data) -> B2,
+    F: FnMut(Frame<B::Data>) -> Frame<B2>,
     B2: Buf,
 {
     type Data = B2;
     type Error = B::Error;
 
-    fn poll_data(
+    fn poll_frame(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         let this = self.project();
-        match this.inner.poll_data(cx) {
+        match this.inner.poll_frame(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(None) => Poll::Ready(None),
-            Poll::Ready(Some(Ok(data))) => Poll::Ready(Some(Ok((this.f)(data)))),
+            Poll::Ready(Some(Ok(frame))) => Poll::Ready(Some(Ok((this.f)(frame)))),
             Poll::Ready(Some(Err(err))) => Poll::Ready(Some(Err(err))),
         }
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Option<http::HeaderMap>, Self::Error>> {
-        self.project().inner.poll_trailers(cx)
     }
 
     fn is_end_stream(&self) -> bool {
@@ -81,12 +74,12 @@ where
     }
 }
 
-impl<B, F> fmt::Debug for MapData<B, F>
+impl<B, F> fmt::Debug for MapFrame<B, F>
 where
     B: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("MapData")
+        f.debug_struct("MapFrame")
             .field("inner", &self.inner)
             .field("f", &type_name::<F>())
             .finish()
