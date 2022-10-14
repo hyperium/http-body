@@ -12,6 +12,7 @@
 //!
 //! [`Empty`] and [`Full`] provide simple implementations.
 
+mod buffered;
 pub mod combinators;
 mod either;
 mod empty;
@@ -19,6 +20,9 @@ mod full;
 mod limited;
 mod stream;
 
+mod util;
+
+pub use self::buffered::Buffered;
 use self::combinators::{BoxBody, MapErr, MapFrame, UnsyncBoxBody};
 pub use self::either::Either;
 pub use self::empty::Empty;
@@ -69,6 +73,15 @@ pub trait BodyExt: http_body::Body {
         Self: Sized + Send + 'static,
     {
         UnsyncBoxBody::new(self)
+    }
+
+    /// Turn this body into [`Buffered`] which will collect all the DATA frames
+    /// and trailers.
+    fn buffered(self) -> combinators::Buffered<Self>
+    where
+        Self: Sized,
+    {
+        combinators::Buffered { body: self }
     }
 }
 
