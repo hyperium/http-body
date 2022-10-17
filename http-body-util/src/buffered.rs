@@ -4,15 +4,15 @@ use http_body::Frame;
 
 use crate::util::BufList;
 
-/// A buffered body produced by [`BodyExt::buffered`] which collects all the DATA frames
+/// A collected body produced by [`BodyExt::collect`] which collects all the DATA frames
 /// and trailers.
 #[derive(Debug)]
-pub struct Buffered<B> {
+pub struct Collected<B> {
     pub(crate) bufs: BufList<B>,
     pub(crate) trailers: Option<HeaderMap>,
 }
 
-impl<B: Buf> Buffered<B> {
+impl<B: Buf> Collected<B> {
     /// If there is a trailers frame buffered, returns a reference to it.
     ///
     /// Returns `None` if the body contained no trailers.
@@ -46,7 +46,7 @@ impl<B: Buf> Buffered<B> {
     }
 }
 
-impl<B> Default for Buffered<B> {
+impl<B> Default for Collected<B> {
     fn default() -> Self {
         Self {
             bufs: BufList::default(),
@@ -66,10 +66,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn buffer_full_body() {
+    async fn full_body() {
         let body = Full::new(&b"hello"[..]);
 
-        let buffered = body.buffered().await.unwrap();
+        let buffered = body.collect().await.unwrap();
 
         let mut buf = buffered.to_bytes();
 
@@ -77,12 +77,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn buffer_segmented_body() {
+    async fn segmented_body() {
         let bufs = [&b"hello"[..], &b"world"[..], &b"!"[..]];
 
         let body = StreamBody::new(stream::iter(bufs.map(Frame::data).map(Ok::<_, Infallible>)));
 
-        let buffered = body.buffered().await.unwrap();
+        let buffered = body.collect().await.unwrap();
 
         let mut buf = buffered.to_bytes();
 
@@ -90,23 +90,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn buffer_trailers() {
+    async fn trailers() {
         let mut trailers = HeaderMap::new();
         trailers.insert("this", "a trailer".try_into().unwrap());
         let bufs = [
             Frame::data(&b"hello"[..]),
-            Frame::data(&b"world!"[..]),
+            Frame::data(&b"world"[..]),
             Frame::trailers(trailers.clone()),
         ];
 
         let body = StreamBody::new(stream::iter(bufs.map(Ok::<_, Infallible>)));
 
-        let buffered = body.buffered().await.unwrap();
+        let buffered = body.collect().await.unwrap();
 
         assert_eq!(&trailers, buffered.trailers().unwrap());
 
         let mut buf = buffered.to_bytes();
 
-        assert_eq!(&buf.copy_to_bytes(buf.remaining())[..], b"helloworld!");
+        assert_eq!(&buf.copy_to_bytes(buf.remaining())[..], b"helloworld");
     }
 }
