@@ -14,6 +14,11 @@ impl<T: Buf> BufList<T> {
         debug_assert!(buf.has_remaining());
         self.bufs.push_back(buf);
     }
+
+    #[inline]
+    pub(crate) fn pop(&mut self) -> Option<T> {
+        self.bufs.pop_front()
+    }
 }
 
 impl<T: Buf> Buf for BufList<T> {
