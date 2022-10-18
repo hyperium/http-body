@@ -14,8 +14,8 @@ use crate::util::BufList;
 /// and trailers.
 #[derive(Debug)]
 pub struct Collected<B> {
-    pub(crate) bufs: BufList<B>,
-    pub(crate) trailers: Option<HeaderMap>,
+    bufs: BufList<B>,
+    trailers: Option<HeaderMap>,
 }
 
 impl<B: Buf> Collected<B> {
