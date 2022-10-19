@@ -36,11 +36,6 @@ impl<T> Frame<T> {
         matches!(self.kind, Kind::Data(..))
     }
 
-    /// Returns whether this is a trailers frame.
-    pub fn is_trailers(&self) -> bool {
-        matches!(self.kind, Kind::Trailers(..))
-    }
-
     /// Consumes self into the buf of the DATA frame.
     ///
     /// Check `Frame::is_data` before to determine if the frame is DATA.
@@ -67,6 +62,41 @@ impl<T> Frame<T> {
     pub fn data_mut(&mut self) -> Option<&mut T> {
         match self.kind {
             Kind::Data(ref mut data) => Some(data),
+            _ => None,
+        }
+    }
+
+    /// Returns whether this is a trailers frame.
+    pub fn is_trailers(&self) -> bool {
+        matches!(self.kind, Kind::Trailers(..))
+    }
+
+    /// Consumes self into the buf of the trailers frame.
+    ///
+    /// Check `Frame::is_trailers` before to determine if the frame is a trailers frame.
+    pub fn into_trailers(self) -> Option<HeaderMap> {
+        match self.kind {
+            Kind::Trailers(trailers) => Some(trailers),
+            _ => None,
+        }
+    }
+
+    /// If this is a trailers frame, returns a reference to it.
+    ///
+    /// Returns `None` if not a trailers frame.
+    pub fn trailers_ref(&self) -> Option<&HeaderMap> {
+        match self.kind {
+            Kind::Trailers(ref trailers) => Some(trailers),
+            _ => None,
+        }
+    }
+
+    /// If this is a trailers frame, returns a mutable reference to it.
+    ///
+    /// Returns `None` if not a trailers frame.
+    pub fn trailers_mut(&mut self) -> Option<&mut HeaderMap> {
+        match self.kind {
+            Kind::Trailers(ref mut trailers) => Some(trailers),
             _ => None,
         }
     }
