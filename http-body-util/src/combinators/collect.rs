@@ -15,7 +15,7 @@ pin_project! {
     }
 }
 
-impl<T: Body + Unpin + ?Sized> Future for Collect<T> {
+impl<T: Body + ?Sized> Future for Collect<T> {
     type Output = Result<crate::Collected<T::Data>, T::Error>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> std::task::Poll<Self::Output> {
@@ -24,7 +24,7 @@ impl<T: Body + Unpin + ?Sized> Future for Collect<T> {
         let mut me = self.project();
 
         loop {
-            let frame = futures_util::ready!(Pin::new(&mut me.body).poll_frame(cx));
+            let frame = futures_util::ready!(me.body.as_mut().poll_frame(cx));
 
             let frame = if let Some(frame) = frame {
                 frame?
