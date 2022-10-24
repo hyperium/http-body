@@ -2,6 +2,16 @@
 
 None.
 
+# 1.0-rc1 (Oct 25, 2022)
+
+- Body trait forward-compat redesign (#67).
+    - `poll_data`/`poll_trailers` removed in favor of `poll_frame`.
+    - New `Frame` type that represents http frames such as DATA and trailers, as
+        well as unknown frames for future implementations like h3.
+    - For more information on this change the proposal can be found
+        [here](https://github.com/hyperium/hyper/issues/2840).
+- Move adatpers and other utilities to `http-body-util`.
+
 # 0.4.5 (May 20, 2022)
 
 - Add `String` impl for `Body`.
