@@ -82,7 +82,10 @@ pub trait BodyExt: http_body::Body {
     where
         Self: Sized,
     {
-        combinators::Collect { body: self }
+        combinators::Collect {
+            body: self,
+            collected: Some(crate::Collected::default()),
+        }
     }
 }
 

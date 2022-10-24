@@ -118,6 +118,25 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn delayed_segments() {
+        let one = stream::once(async { Ok::<_, Infallible>(Frame::data(&b"hello "[..])) });
+        let two = stream::once(async {
+            // a yield just so its not ready immediately
+            tokio::task::yield_now().await;
+            Ok::<_, Infallible>(Frame::data(&b"world!"[..]))
+        });
+        let stream = futures_util::StreamExt::chain(one, two);
+
+        let body = StreamBody::new(stream);
+
+        let buffered = body.collect().await.unwrap();
+
+        let mut buf = buffered.to_bytes();
+
+        assert_eq!(&buf.copy_to_bytes(buf.remaining())[..], b"hello world!");
+    }
+
+    #[tokio::test]
     async fn trailers() {
         let mut trailers = HeaderMap::new();
         trailers.insert("this", "a trailer".try_into().unwrap());
