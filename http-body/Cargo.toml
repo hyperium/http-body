@@ -15,7 +15,7 @@ authors = [
   "Sean McArthur <sean@seanmonstar.com>",
 ]
 edition = "2018"
-readme = "README.md"
+readme = "../README.md"
 documentation = "https://docs.rs/http-body"
 repository = "https://github.com/hyperium/http-body"
 license = "MIT"
