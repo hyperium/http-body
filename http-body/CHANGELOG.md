@@ -2,7 +2,7 @@
 
 None.
 
-# 1.0-rc1 (Oct 25, 2022)
+# 1.0.0-rc1 (Oct 25, 2022)
 
 - Body trait forward-compat redesign (#67).
     - `poll_data`/`poll_trailers` removed in favor of `poll_frame`.
