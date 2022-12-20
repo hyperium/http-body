@@ -38,11 +38,12 @@ impl<T> Frame<T> {
 
     /// Consumes self into the buf of the DATA frame.
     ///
-    /// Check `Frame::is_data` before to determine if the frame is DATA.
-    pub fn into_data(self) -> Option<T> {
+    /// Returns an [`Err`] containing the original [`Frame`] when frame is not a DATA frame.
+    /// `Frame::is_data` can also be used to determine if the frame is a DATA frame.
+    pub fn into_data(self) -> Result<T, Self> {
         match self.kind {
-            Kind::Data(data) => Some(data),
-            _ => None,
+            Kind::Data(data) => Ok(data),
+            _ => Err(self),
         }
     }
 
@@ -73,11 +74,12 @@ impl<T> Frame<T> {
 
     /// Consumes self into the buf of the trailers frame.
     ///
-    /// Check `Frame::is_trailers` before to determine if the frame is a trailers frame.
-    pub fn into_trailers(self) -> Option<HeaderMap> {
+    /// Returns an [`Err`] containing the original [`Frame`] when frame is not a trailers frame.
+    /// `Frame::is_trailers` can also be used to determine if the frame is a trailers frame.
+    pub fn into_trailers(self) -> Result<HeaderMap, Self> {
         match self.kind {
-            Kind::Trailers(trailers) => Some(trailers),
-            _ => None,
+            Kind::Trailers(trailers) => Ok(trailers),
+            _ => Err(self),
         }
     }
 

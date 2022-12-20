@@ -37,18 +37,21 @@ impl<B: Buf> Collected<B> {
     }
 
     pub(crate) fn push_frame(&mut self, frame: Frame<B>) {
-        if frame.is_data() {
-            let data = frame.into_data().unwrap();
-            self.bufs.push(data);
-        } else if frame.is_trailers() {
-            let trailers = frame.into_trailers().unwrap();
+        let frame = match frame.into_data() {
+            Ok(data) => {
+                self.bufs.push(data);
+                return;
+            }
+            Err(frame) => frame,
+        };
 
+        if let Ok(trailers) = frame.into_trailers() {
             if let Some(current) = &mut self.trailers {
                 current.extend(trailers.into_iter());
             } else {
                 self.trailers = Some(trailers);
             }
-        }
+        };
     }
 }
 
