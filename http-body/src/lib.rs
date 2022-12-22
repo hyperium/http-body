@@ -26,14 +26,14 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 /// Trait representing a streaming body of a Request or Response.
-/// 
-/// Individual frames are streamed via the `poll_frame` function, which asynchronously yields 
+///
+/// Individual frames are streamed via the `poll_frame` function, which asynchronously yields
 /// instances of [`Frame<Data>`].
 ///
 /// Frames can contain a data buffer of type `Self::Data`. Frames can also contain an optional
 /// set of trailers used to finalize the request/response exchange. This is mostly used when using
 /// the HTTP/2.0 protocol.
-/// 
+///
 /// The `size_hint` function provides insight into the total number of bytes that will be streamed.
 pub trait Body {
     /// Values yielded by the `Body`.
