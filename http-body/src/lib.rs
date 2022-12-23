@@ -27,12 +27,14 @@ use std::task::{Context, Poll};
 
 /// Trait representing a streaming body of a Request or Response.
 ///
-/// Data is streamed via the `poll_data` function, which asynchronously yields `T: Buf` values. The
-/// `size_hint` function provides insight into the total number of bytes that will be streamed.
+/// Individual frames are streamed via the `poll_frame` function, which asynchronously yields
+/// instances of [`Frame<Data>`].
 ///
-/// The `poll_trailers` function returns an optional set of trailers used to finalize the request /
-/// response exchange. This is mostly used when using the HTTP/2.0 protocol.
+/// Frames can contain a data buffer of type `Self::Data`. Frames can also contain an optional
+/// set of trailers used to finalize the request/response exchange. This is mostly used when using
+/// the HTTP/2.0 protocol.
 ///
+/// The `size_hint` function provides insight into the total number of bytes that will be streamed.
 pub trait Body {
     /// Values yielded by the `Body`.
     type Data: Buf;
@@ -48,11 +50,10 @@ pub trait Body {
 
     /// Returns `true` when the end of stream has been reached.
     ///
-    /// An end of stream means that both `poll_data` and `poll_trailers` will
-    /// return `None`.
+    /// An end of stream means that `poll_frame` will return `None`.
     ///
     /// A return value of `false` **does not** guarantee that a value will be
-    /// returned from `poll_stream` or `poll_trailers`.
+    /// returned from `poll_frame`.
     fn is_end_stream(&self) -> bool {
         false
     }
