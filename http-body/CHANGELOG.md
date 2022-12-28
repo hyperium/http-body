@@ -2,6 +2,10 @@
 
 None.
 
+# 1.0.0-rc.2 (Dec 28, 2022)
+
+- Change return type of `Frame::into_data()` and `Frame::into_trailers()` methods to return `Result<T, Self>` instead of `Option<T>`.
+
 # 1.0.0-rc1 (Oct 25, 2022)
 
 - Body trait forward-compat redesign (#67).

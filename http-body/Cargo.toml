@@ -2,13 +2,12 @@
 name = "http-body"
 # When releasing to crates.io:
 # - Remove path dependencies
-# - Update html_root_url.
 # - Update doc url
 #   - Cargo.toml
 #   - README.md
 # - Update CHANGELOG.md.
 # - Create "http-body-x.y.z" git tag.
-version = "1.0.0-rc1"
+version = "1.0.0-rc.2"
 authors = [
   "Carl Lerche <me@carllerche.com>",
   "Lucio Franco <luciofranco14@gmail.com>",

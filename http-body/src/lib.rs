@@ -1,4 +1,3 @@
-#![doc(html_root_url = "https://docs.rs/http-body/1.0.0-rc1")]
 #![deny(
     missing_debug_implementations,
     missing_docs,
