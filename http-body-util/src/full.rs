@@ -89,7 +89,10 @@ where
 {
     /// Create an empty `Full`.
     fn default() -> Self {
-        Full { data: None, _marker: PhantomData }
+        Full {
+            data: None,
+            _marker: PhantomData,
+        }
     }
 }
 

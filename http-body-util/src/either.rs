@@ -147,7 +147,7 @@ mod tests {
     use std::convert::Infallible;
 
     use super::*;
-    use crate::{Empty, Full, BodyExt};
+    use crate::{BodyExt, Empty, Full};
 
     #[tokio::test]
     async fn data_left() {
