@@ -42,6 +42,7 @@ pub trait Body {
     type Error;
 
     /// Attempt to pull out the next data buffer of this stream.
+    #[allow(clippy::type_complexity)]
     fn poll_frame(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
