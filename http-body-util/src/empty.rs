@@ -1,6 +1,7 @@
 use bytes::Buf;
 use http_body::{Body, Frame, SizeHint};
 use std::{
+    convert::Infallible,
     fmt,
     marker::PhantomData,
     pin::Pin,
@@ -8,7 +9,7 @@ use std::{
 };
 
 /// A body that is always empty.
-pub struct Empty<D, E> {
+pub struct Empty<D, E = Infallible> {
     _marker: PhantomData<fn() -> (D, E)>,
 }
 

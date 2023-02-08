@@ -2,7 +2,7 @@ use bytes::{Buf, Bytes};
 use http_body::{Body, Frame, SizeHint};
 use pin_project_lite::pin_project;
 use std::borrow::Cow;
-use std::convert::TryFrom;
+use std::convert::{Infallible, TryFrom};
 use std::fmt;
 use std::marker::PhantomData;
 use std::pin::Pin;
@@ -10,7 +10,7 @@ use std::task::{Context, Poll};
 
 pin_project! {
     /// A body that consists of a single chunk.
-    pub struct Full<D, E> {
+    pub struct Full<D, E = Infallible> {
         data: Option<D>,
         _marker: PhantomData<fn() -> E>,
     }
