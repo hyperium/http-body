@@ -33,7 +33,9 @@ pub use self::stream::StreamBody;
 
 /// An extension trait for [`http_body::Body`] adding various combinators and adapters
 pub trait BodyExt: http_body::Body {
-    /// Returns a future that resolves to the next `Frame`, if any.
+    /// Returns a future that resolves to the next [`Frame`], if any.
+    ///
+    /// [`Frame`]: combinators::Frame
     fn frame(&mut self) -> combinators::Frame<'_, Self>
     where
         Self: Unpin,

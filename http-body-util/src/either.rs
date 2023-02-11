@@ -7,8 +7,11 @@ use bytes::Buf;
 use http_body::{Body, Frame, SizeHint};
 use proj::EitherProj;
 
-/// Sum type with two cases: `Left` and `Right`, used if a body can be one of
+/// Sum type with two cases: [`Left`] and [`Right`], used if a body can be one of
 /// two distinct types.
+///
+/// [`Left`]: Either::Left
+/// [`Right`]: Either::Right
 #[derive(Debug, Clone, Copy)]
 pub enum Either<L, R> {
     /// A value of type `L`
@@ -99,7 +102,7 @@ pub(crate) mod proj {
     //!         Right {#[pin] right: R}
     //!     }
     //! }
-    //! ```  
+    //! ```
     //!
     //! [pin-project-lite]: https://docs.rs/pin-project-lite/latest/pin_project_lite/
     use std::marker::PhantomData;
