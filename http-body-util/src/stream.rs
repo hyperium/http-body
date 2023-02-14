@@ -8,7 +8,7 @@ use std::{
 };
 
 pin_project! {
-    /// A body created from a `Stream`.
+    /// A body created from a [`Stream`].
     #[derive(Clone, Copy, Debug)]
     pub struct StreamBody<S> {
         #[pin]

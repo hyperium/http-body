@@ -8,7 +8,9 @@ use http_body::Body;
 use pin_project_lite::pin_project;
 
 pin_project! {
-    /// Future that resolves into a `Collected`.
+    /// Future that resolves into a [`Collected`].
+    ///
+    /// [`Collected`]: crate::Collected
     pub struct Collect<T>
     where
         T: Body,

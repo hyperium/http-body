@@ -10,7 +10,7 @@ use std::{
 pin_project! {
     /// Body returned by the [`map_err`] combinator.
     ///
-    /// [`map_err`]: crate::util::BodyExt::map_err
+    /// [`map_err`]: crate::BodyExt::map_err
     #[derive(Clone, Copy)]
     pub struct MapErr<B, F> {
         #[pin]

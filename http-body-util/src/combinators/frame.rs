@@ -6,7 +6,7 @@ use core::task;
 
 #[must_use = "futures don't do anything unless polled"]
 #[derive(Debug)]
-/// Future that resolves to the next frame from a `Body`.
+/// Future that resolves to the next frame from a [`Body`].
 pub struct Frame<'a, T: ?Sized>(pub(crate) &'a mut T);
 
 impl<'a, T: Body + Unpin + ?Sized> Future for Frame<'a, T> {
