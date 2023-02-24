@@ -31,6 +31,21 @@ impl<T> Frame<T> {
         }
     }
 
+    /// Maps this frame's data to a different type.
+    pub fn map_data<F, D>(self, f: F) -> Frame<D>
+    where
+        F: FnOnce(T) -> D,
+    {
+        match self.kind {
+            Kind::Data(data) => Frame {
+                kind: Kind::Data(f(data)),
+            },
+            Kind::Trailers(trailers) => Frame {
+                kind: Kind::Trailers(trailers),
+            },
+        }
+    }
+
     /// Returns whether this is a DATA frame.
     pub fn is_data(&self) -> bool {
         matches!(self.kind, Kind::Data(..))
