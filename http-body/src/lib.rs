@@ -56,7 +56,7 @@ pub trait Body {
     /// when the consumer is not yet ready to try to read the next frame. Since healthiness is not
     /// an operation that completes, this method returns just a `Result` rather than a `Poll`.
     ///
-    /// For example, a `Body` implementation could maintain a timer counting down betwen
+    /// For example, a `Body` implementation could maintain a timer counting down between
     /// `poll_frame` calls and report an error from `poll_healthy` when time expires.
     ///
     /// The default implementation returns `Ok(())`.
