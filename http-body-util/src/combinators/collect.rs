@@ -3,6 +3,7 @@ use std::{
     task::{Context, Poll},
 };
 
+use bytes::Buf;
 use futures_util::Future;
 use http_body::Body;
 use pin_project_lite::pin_project;
@@ -37,7 +38,10 @@ impl<T: Body + ?Sized> Future for Collect<T> {
                 return Poll::Ready(Ok(me.collected.take().expect("polled after complete")));
             };
 
-            me.collected.as_mut().unwrap().push_frame(frame);
+            // Only push this frame if it's a trailer frame, or if it has some data in it.
+            if frame.is_trailers() || frame.data_ref().map(Buf::has_remaining).unwrap_or_default() {
+                me.collected.as_mut().unwrap().push_frame(frame);
+            }
         }
     }
 }

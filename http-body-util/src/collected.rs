@@ -112,7 +112,6 @@ mod tests {
     #[tokio::test]
     async fn segmented_body() {
         let bufs = [&b"hello"[..], &b"world"[..], &b"!"[..]];
-
         let body = StreamBody::new(stream::iter(bufs.map(Frame::data).map(Ok::<_, Infallible>)));
 
         let buffered = body.collect().await.unwrap();
@@ -160,5 +159,16 @@ mod tests {
         let mut buf = buffered.to_bytes();
 
         assert_eq!(&buf.copy_to_bytes(buf.remaining())[..], b"helloworld!");
+    }
+
+    /// Test for issue [#88](https://github.com/hyperium/http-body/issues/88).
+    #[tokio::test]
+    async fn empty_frame() {
+        let bufs: [&[u8]; 1] = [&[]];
+
+        let body = StreamBody::new(stream::iter(bufs.map(Frame::data).map(Ok::<_, Infallible>)));
+        let buffered = body.collect().await.unwrap();
+
+        assert_eq!(buffered.to_bytes().len(), 0);
     }
 }
