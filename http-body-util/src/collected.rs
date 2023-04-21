@@ -41,7 +41,11 @@ impl<B: Buf> Collected<B> {
     pub(crate) fn push_frame(&mut self, frame: Frame<B>) {
         let frame = match frame.into_data() {
             Ok(data) => {
-                self.bufs.push(data);
+                // Only push this frame if it has some data in it, to avoid crashing on
+                // `BufList::push`.
+                if data.has_remaining() {
+                    self.bufs.push(data);
+                }
                 return;
             }
             Err(frame) => frame,
@@ -112,7 +116,6 @@ mod tests {
     #[tokio::test]
     async fn segmented_body() {
         let bufs = [&b"hello"[..], &b"world"[..], &b"!"[..]];
-
         let body = StreamBody::new(stream::iter(bufs.map(Frame::data).map(Ok::<_, Infallible>)));
 
         let buffered = body.collect().await.unwrap();
@@ -160,5 +163,16 @@ mod tests {
         let mut buf = buffered.to_bytes();
 
         assert_eq!(&buf.copy_to_bytes(buf.remaining())[..], b"helloworld!");
+    }
+
+    /// Test for issue [#88](https://github.com/hyperium/http-body/issues/88).
+    #[tokio::test]
+    async fn empty_frame() {
+        let bufs: [&[u8]; 1] = [&[]];
+
+        let body = StreamBody::new(stream::iter(bufs.map(Frame::data).map(Ok::<_, Infallible>)));
+        let buffered = body.collect().await.unwrap();
+
+        assert_eq!(buffered.to_bytes().len(), 0);
     }
 }
