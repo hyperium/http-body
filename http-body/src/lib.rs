@@ -2,7 +2,9 @@
     missing_debug_implementations,
     missing_docs,
     unreachable_pub,
-    rustdoc::broken_intra_doc_links
+    rustdoc::broken_intra_doc_links,
+    clippy::missing_safety_doc,
+    clippy::undocumented_unsafe_blocks
 )]
 #![cfg_attr(test, deny(warnings))]
 
@@ -41,6 +43,7 @@ pub trait Body {
     /// The error type this `Body` might generate.
     type Error;
 
+    #[allow(clippy::type_complexity)]
     /// Attempt to pull out the next data buffer of this stream.
     fn poll_frame(
         self: Pin<&mut Self>,
