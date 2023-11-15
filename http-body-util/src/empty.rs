@@ -57,9 +57,7 @@ impl<D> Default for Empty<D> {
 
 impl<D> Clone for Empty<D> {
     fn clone(&self) -> Self {
-        Self {
-            _marker: PhantomData,
-        }
+        *self
     }
 }
 
