@@ -1,6 +1,7 @@
-# Unreleased
+# 1.0.0 (November 15, 2023)
 
-None.
+- Update `http` to 1.0.
+- Add `Frame::map_data()`.
 
 # 1.0.0-rc.2 (Dec 28, 2022)
 
