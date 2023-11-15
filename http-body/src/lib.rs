@@ -141,6 +141,8 @@ impl<B: Body> Body for http::Request<B> {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        // SAFETY:
+        // A pin projection.
         unsafe {
             self.map_unchecked_mut(http::Request::body_mut)
                 .poll_frame(cx)
@@ -164,6 +166,8 @@ impl<B: Body> Body for http::Response<B> {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        // SAFETY:
+        // A pin projection.
         unsafe {
             self.map_unchecked_mut(http::Response::body_mut)
                 .poll_frame(cx)
