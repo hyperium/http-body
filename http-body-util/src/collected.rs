@@ -53,7 +53,7 @@ impl<B: Buf> Collected<B> {
 
         if let Ok(trailers) = frame.into_trailers() {
             if let Some(current) = &mut self.trailers {
-                current.extend(trailers.into_iter());
+                current.extend(trailers);
             } else {
                 self.trailers = Some(trailers);
             }
