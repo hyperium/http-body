@@ -122,7 +122,7 @@ mod tests {
         hint.set_upper(0);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        assert!(matches!(body.frame().await, None));
+        assert!(body.frame().await.is_none());
     }
 
     #[tokio::test]
@@ -207,7 +207,7 @@ mod tests {
         hint.set_upper(0);
         assert_eq!(body.size_hint().upper(), hint.upper());
 
-        assert!(matches!(body.frame().await, None));
+        assert!(body.frame().await.is_none());
     }
 
     struct SomeTrailers;
