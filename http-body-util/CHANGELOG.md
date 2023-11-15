@@ -1,3 +1,8 @@
+# v0.1.0
+
+- Update `http` to 1.0.
+- Update `http-body` to 1.0.
+
 # v0.1.0-rc.3
 
 - Fix `BodyExt::collect()` from panicking on an empty frame.
