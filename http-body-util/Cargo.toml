@@ -26,12 +26,20 @@ keywords = ["http"]
 categories = ["web-programming"]
 rust-version = "1.61"
 
+[features]
+default = []
+channel = ["dep:tokio"]
+full = ["channel"]
+
 [dependencies]
 bytes = "1"
 futures-core = { version = "0.3", default-features = false }
 http = "1"
 http-body = { version = "1", path = "../http-body" }
 pin-project-lite = "0.2"
+
+# optional dependencies
+tokio = { version = "1", features = ["sync"], optional = true }
 
 [dev-dependencies]
 futures-util = { version = "0.3", default-features = false }
