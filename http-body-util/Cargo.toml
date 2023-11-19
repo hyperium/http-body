@@ -25,12 +25,20 @@ Combinators and adapters for HTTP request or response bodies.
 keywords = ["http"]
 categories = ["web-programming"]
 
+[features]
+default = []
+channel = ["dep:tokio"]
+full = ["channel"]
+
 [dependencies]
 bytes = "1"
 futures-util = { version = "0.3.14", default-features = false, features = ["alloc"] }
 http = "1"
 http-body = { version = "1", path = "../http-body" }
 pin-project-lite = "0.2"
+
+# optional dependencies
+tokio = { version = "1", features = ["sync"], optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
