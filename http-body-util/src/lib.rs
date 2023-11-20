@@ -89,6 +89,50 @@ pub trait BodyExt: http_body::Body {
             collected: Some(crate::Collected::default()),
         }
     }
+
+    /// Add trailers to the body.
+    ///
+    /// The trailers will be sent when all previous frames have been sent and the `trailers` future
+    /// resolves.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use http::HeaderMap;
+    /// use http_body_util::{Full, BodyExt};
+    /// use bytes::Bytes;
+    ///
+    /// # #[tokio::main]
+    /// async fn main() {
+    /// let (tx, rx) = tokio::sync::oneshot::channel::<HeaderMap>();
+    ///
+    /// let body = Full::<Bytes>::from("Hello, World!")
+    ///     // add trailers via a future
+    ///     .with_trailers(async move {
+    ///         match rx.await {
+    ///             Ok(trailers) => Some(Ok(trailers)),
+    ///             Err(_err) => None,
+    ///         }
+    ///     });
+    ///
+    /// // compute the trailers in the background
+    /// tokio::spawn(async move {
+    ///     let _ = tx.send(compute_trailers().await);
+    /// });
+    ///
+    /// async fn compute_trailers() -> HeaderMap {
+    ///     // ...
+    ///     # unimplemented!()
+    /// }
+    /// # }
+    /// ```
+    fn with_trailers<F>(self, trailers: F) -> combinators::WithTrailers<Self, F>
+    where
+        Self: Sized,
+        F: std::future::Future<Output = Option<Result<http::HeaderMap, Self::Error>>>,
+    {
+        combinators::WithTrailers::new(self, trailers)
+    }
 }
 
 impl<T: ?Sized> BodyExt for T where T: http_body::Body {}

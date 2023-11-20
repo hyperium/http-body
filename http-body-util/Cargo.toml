@@ -33,4 +33,4 @@ http-body = { version = "1", path = "../http-body" }
 pin-project-lite = "0.2"
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt"] }
+tokio = { version = "1", features = ["macros", "rt", "sync", "rt-multi-thread"] }
