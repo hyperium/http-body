@@ -110,14 +110,6 @@ where
     }
 
     #[inline]
-    fn is_end_stream(&self) -> bool {
-        match &self.state {
-            State::PollBody { body, .. } => body.is_end_stream(),
-            State::PollTrailers { .. } | State::Done => true,
-        }
-    }
-
-    #[inline]
     fn size_hint(&self) -> http_body::SizeHint {
         match &self.state {
             State::PollBody { body, .. } => body.size_hint(),
