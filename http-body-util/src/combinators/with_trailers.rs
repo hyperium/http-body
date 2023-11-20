@@ -43,9 +43,7 @@ pin_project! {
             trailers: F,
             prev_trailers: Option<HeaderMap>,
         },
-        Trailers {
-            trailers: Option<HeaderMap>,
-        }
+        Done,
     }
 }
 
@@ -64,15 +62,15 @@ where
         loop {
             let mut this = self.as_mut().project();
 
-            let new_state: State<_, _> = match this.state.as_mut().project() {
+            match this.state.as_mut().project() {
                 StateProj::PollBody { body, trailers } => match ready!(body.poll_frame(cx)?) {
                     Some(frame) => match frame.into_trailers() {
                         Ok(prev_trailers) => {
                             let trailers = trailers.take().unwrap();
-                            State::PollTrailers {
+                            this.state.set(State::PollTrailers {
                                 trailers,
                                 prev_trailers: Some(prev_trailers),
-                            }
+                            });
                         }
                         Err(frame) => {
                             return Poll::Ready(Some(Ok(frame)));
@@ -80,10 +78,10 @@ where
                     },
                     None => {
                         let trailers = trailers.take().unwrap();
-                        State::PollTrailers {
+                        this.state.set(State::PollTrailers {
                             trailers,
                             prev_trailers: None,
-                        }
+                        });
                     }
                 },
                 StateProj::PollTrailers {
@@ -93,23 +91,21 @@ where
                     let trailers = ready!(trailers.poll(cx)?);
                     match (trailers, prev_trailers.take()) {
                         (None, None) => return Poll::Ready(None),
-                        (None, Some(trailers)) | (Some(trailers), None) => State::Trailers {
-                            trailers: Some(trailers),
-                        },
+                        (None, Some(trailers)) | (Some(trailers), None) => {
+                            this.state.set(State::Done);
+                            return Poll::Ready(Some(Ok(Frame::trailers(trailers))));
+                        }
                         (Some(new_trailers), Some(mut prev_trailers)) => {
                             prev_trailers.extend(new_trailers);
-                            State::Trailers {
-                                trailers: Some(prev_trailers),
-                            }
+                            this.state.set(State::Done);
+                            return Poll::Ready(Some(Ok(Frame::trailers(prev_trailers))));
                         }
                     }
                 }
-                StateProj::Trailers { trailers } => {
-                    return Poll::Ready(trailers.take().map(Frame::trailers).map(Ok));
+                StateProj::Done => {
+                    return Poll::Ready(None);
                 }
-            };
-
-            this.state.set(new_state);
+            }
         }
     }
 
@@ -117,7 +113,7 @@ where
     fn is_end_stream(&self) -> bool {
         match &self.state {
             State::PollBody { body, .. } => body.is_end_stream(),
-            State::PollTrailers { .. } | State::Trailers { .. } => true,
+            State::PollTrailers { .. } | State::Done => true,
         }
     }
 
@@ -125,7 +121,7 @@ where
     fn size_hint(&self) -> http_body::SizeHint {
         match &self.state {
             State::PollBody { body, .. } => body.size_hint(),
-            State::PollTrailers { .. } | State::Trailers { .. } => Default::default(),
+            State::PollTrailers { .. } | State::Done => Default::default(),
         }
     }
 }
