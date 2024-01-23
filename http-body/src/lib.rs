@@ -50,19 +50,18 @@ pub trait Body {
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>>;
 
-    /// Determine if the body is still in a healthy state without polling for the next frame.
+    /// Attempt to progress the body's state without pulling a new frame.
     ///
-    /// `Body` consumers can use this method to check if the body has entered an error state even
-    /// when the consumer is not yet ready to try to read the next frame. Since healthiness is not
-    /// an operation that completes, this method returns just a `Result` rather than a `Poll`.
+    /// `Body` consumers can use this method to allow the `Body` implementation to continue to
+    /// perform work even when the consumer is not yet ready to read the next frame.  For example,
+    /// a `Body` implementation could maintain a timer counting down between `poll_frame` calls and
+    /// report an error from `poll_progress` when time expires.
     ///
-    /// For example, a `Body` implementation could maintain a timer counting down between
-    /// `poll_frame` calls and report an error from `poll_healthy` when time expires.
-    ///
-    /// The default implementation returns `Ok(())`.
-    fn poll_healthy(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Result<(), Self::Error> {
+    /// Consumers are *not* required to call this method. A `Body` implementation should not depend
+    /// on calls to `poll_progress` to occur.
+    fn poll_progress(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         let _ = cx;
-        Ok(())
+        Poll::Ready(Ok(()))
     }
 
     /// Returns `true` when the end of stream has been reached.
