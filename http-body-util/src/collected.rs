@@ -4,7 +4,7 @@ use std::{
     task::{Context, Poll},
 };
 
-use bytes::{Buf, Bytes};
+use bytes::{Buf, Bytes, BytesMut};
 use http::HeaderMap;
 use http_body::{Body, Frame};
 
@@ -36,6 +36,11 @@ impl<B: Buf> Collected<B> {
     /// Convert this body into a [`Bytes`].
     pub fn to_bytes(mut self) -> Bytes {
         self.bufs.copy_to_bytes(self.bufs.remaining())
+    }
+
+    /// Convert this body into a [`BytesMut`].
+    pub fn to_bytes_mut(mut self) -> BytesMut {
+        self.bufs.copy_to_bytes_mut(self.bufs.remaining())
     }
 
     pub(crate) fn push_frame(&mut self, frame: Frame<B>) {
@@ -121,6 +126,18 @@ mod tests {
         let buffered = body.collect().await.unwrap();
 
         let mut buf = buffered.to_bytes();
+
+        assert_eq!(&buf.copy_to_bytes(buf.remaining())[..], b"helloworld!");
+    }
+
+    #[tokio::test]
+    async fn segmented_body_mut() {
+        let bufs = [&b"hello"[..], &b"world"[..], &b"!"[..]];
+        let body = StreamBody::new(stream::iter(bufs.map(Frame::data).map(Ok::<_, Infallible>)));
+
+        let buffered = body.collect().await.unwrap();
+
+        let mut buf = buffered.to_bytes_mut();
 
         assert_eq!(&buf.copy_to_bytes(buf.remaining())[..], b"helloworld!");
     }

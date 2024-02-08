@@ -19,6 +19,14 @@ impl<T: Buf> BufList<T> {
     pub(crate) fn pop(&mut self) -> Option<T> {
         self.bufs.pop_front()
     }
+
+    #[inline]
+    pub(crate) fn copy_to_bytes_mut(&mut self, len: usize) -> BytesMut {
+        assert!(len <= self.remaining(), "`len` greater than remaining");
+        let mut bm = BytesMut::with_capacity(len);
+        bm.put(self.take(len));
+        bm
+    }
 }
 
 impl<T: Buf> Buf for BufList<T> {
@@ -77,10 +85,8 @@ impl<T: Buf> Buf for BufList<T> {
             }
             Some(front) if front.remaining() > len => front.copy_to_bytes(len),
             _ => {
-                assert!(len <= self.remaining(), "`len` greater than remaining");
-                let mut bm = BytesMut::with_capacity(len);
-                bm.put(self.take(len));
-                bm.freeze()
+                let bytes_mut = self.copy_to_bytes_mut(len);
+                bytes_mut.freeze()
             }
         }
     }
