@@ -10,7 +10,7 @@ jobs:
     name: Check Style
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v4
     - name: Install Rustfmt
       run: rustup component add rustfmt
     - name: Check formatting
@@ -26,7 +26,7 @@ jobs:
           - stable
           - beta
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
       - name: Install Rust
         run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
       - name: Run tests
@@ -35,6 +35,6 @@ jobs:
   clippy_check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features
