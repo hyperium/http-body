@@ -1,3 +1,8 @@
+# v0.1.1
+
+- Add `BodyExt::with_trailers()` combinator.
+- Improve performance of `BodyExt::collect().to_bytes()`.
+
 # v0.1.0
 
 - Update `http` to 1.0.
