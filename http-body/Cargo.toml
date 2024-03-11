@@ -23,6 +23,7 @@ Trait representing an asynchronous, streaming, HTTP request or response body.
 """
 keywords = ["http"]
 categories = ["web-programming"]
+rust-version = "1.49"
 
 [dependencies]
 bytes = "1"

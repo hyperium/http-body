@@ -1,3 +1,2 @@
 [workspace]
 members = ["http-body", "http-body-util"]
-resolver = "2"
