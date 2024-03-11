@@ -1,9 +1,4 @@
-#![deny(
-    missing_debug_implementations,
-    missing_docs,
-    unreachable_pub,
-    rustdoc::broken_intra_doc_links
-)]
+#![deny(missing_debug_implementations, missing_docs, unreachable_pub)]
 #![cfg_attr(test, deny(warnings))]
 
 //! Utilities for [`http_body::Body`].
