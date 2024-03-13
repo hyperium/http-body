@@ -7,7 +7,6 @@ on:
 
 jobs:
   style:
-    name: Check Style
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -18,7 +17,6 @@ jobs:
       run: cargo fmt --all -- --check
 
   test:
-    name: Test
     needs: [style]
     runs-on: ubuntu-latest
     strategy:
