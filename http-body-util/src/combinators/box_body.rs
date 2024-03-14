@@ -1,5 +1,3 @@
-use crate::BodyExt as _;
-
 use bytes::Buf;
 use http_body::{Body, Frame, SizeHint};
 use std::{
@@ -63,9 +61,10 @@ where
 impl<D, E> Default for BoxBody<D, E>
 where
     D: Buf + 'static,
+    E: 'static,
 {
     fn default() -> Self {
-        BoxBody::new(crate::Empty::new().map_err(|err| match err {}))
+        BoxBody::new(crate::Empty::new())
     }
 }
 
@@ -115,8 +114,9 @@ where
 impl<D, E> Default for UnsyncBoxBody<D, E>
 where
     D: Buf + 'static,
+    E: 'static,
 {
     fn default() -> Self {
-        UnsyncBoxBody::new(crate::Empty::new().map_err(|err| match err {}))
+        UnsyncBoxBody::new(crate::Empty::new())
     }
 }
