@@ -94,7 +94,7 @@ impl<B> Unpin for Collected<B> {}
 
 #[cfg(test)]
 mod tests {
-    use std::convert::{Infallible, TryInto};
+    use std::convert::TryInto;
 
     use futures_util::stream;
 

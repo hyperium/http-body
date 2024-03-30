@@ -123,7 +123,7 @@ mod tests {
     use std::convert::Infallible;
 
     use bytes::Bytes;
-    use http::{HeaderMap, HeaderName, HeaderValue};
+    use http::{HeaderName, HeaderValue};
 
     use crate::{BodyExt, Empty, Full};
 
