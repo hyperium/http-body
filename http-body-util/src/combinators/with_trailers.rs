@@ -109,6 +109,13 @@ where
         }
     }
 
+    fn poll_progress(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        match self.project().state.project() {
+            StateProj::PollBody { body, .. } => body.poll_progress(cx),
+            _ => Poll::Ready(Ok(())),
+        }
+    }
+
     #[inline]
     fn size_hint(&self) -> http_body::SizeHint {
         match &self.state {
