@@ -154,6 +154,11 @@ impl<T: Buf> Buf for BufList<T> {
     }
 
     #[inline]
+    fn has_remaining(&self) -> bool {
+        self.bufs.iter().any(|buf| buf.has_remaining())
+    }
+
+    #[inline]
     fn chunk(&self) -> &[u8] {
         self.bufs.front().map(Buf::chunk).unwrap_or_default()
     }
