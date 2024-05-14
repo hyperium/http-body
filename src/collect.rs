@@ -154,6 +154,11 @@ impl<T: Buf> Buf for BufList<T> {
     }
 
     #[inline]
+    fn has_remaining(&self) -> bool {
+        self.bufs.iter().any(|buf| buf.has_remaining())
+    }
+
+    #[inline]
     fn chunk(&self) -> &[u8] {
         self.bufs.front().map(Buf::chunk).unwrap_or_default()
     }
@@ -204,9 +209,15 @@ impl<T: Buf> Buf for BufList<T> {
             }
             Some(front) if front.remaining() > len => front.copy_to_bytes(len),
             _ => {
-                assert!(len <= self.remaining(), "`len` greater than remaining");
+                let rem = self.remaining();
+                assert!(len <= rem, "`len` greater than remaining");
                 let mut bm = BytesMut::with_capacity(len);
-                bm.put(self.take(len));
+                if rem == len {
+                    // .take() costs a lot more, so skip it if we don't need it
+                    bm.put(self);
+                } else {
+                    bm.put(self.take(len));
+                }
                 bm.freeze()
             }
         }
