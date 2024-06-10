@@ -7,17 +7,16 @@ on:
 
 jobs:
   style:
-    name: Check Style
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install Rustfmt
-      run: rustup component add rustfmt
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt
     - name: Check formatting
-      run: cargo fmt --all -- --check
+      run: cargo fmt --all --check
 
   test:
-    name: Test
     needs: [style]
     runs-on: ubuntu-latest
     strategy:
@@ -27,8 +26,9 @@ jobs:
           - beta
     steps:
       - uses: actions/checkout@v4
-      - name: Install Rust
-        run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
       - name: Run tests
         run: cargo test --workspace
 
