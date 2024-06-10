@@ -67,6 +67,15 @@ where
         }
     }
 
+    fn poll_progress(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        let this = self.project();
+        match this.inner.poll_progress(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(Ok(())) => Poll::Ready(Ok(())),
+            Poll::Ready(Err(err)) => Poll::Ready(Err((this.f)(err))),
+        }
+    }
+
     fn is_end_stream(&self) -> bool {
         self.inner.is_end_stream()
     }
