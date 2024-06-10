@@ -29,7 +29,7 @@ impl<T: Body + ?Sized> Future for Collect<T> {
         let mut me = self.project();
 
         loop {
-            let frame = futures_core::ready!(me.body.as_mut().poll_frame(cx));
+            let frame = futures_util::ready!(me.body.as_mut().poll_frame(cx));
 
             let frame = if let Some(frame) = frame {
                 frame?

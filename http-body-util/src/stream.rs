@@ -1,5 +1,5 @@
 use bytes::Buf;
-use futures_core::Stream;
+use futures_util::{ready, stream::Stream};
 use http_body::{Body, Frame};
 use pin_project_lite::pin_project;
 use std::{
@@ -97,6 +97,42 @@ where
             Poll::Ready(Some(frame)) => Poll::Ready(Some(frame)),
             Poll::Ready(None) => Poll::Ready(None),
             Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+pin_project! {
+    /// A data stream created from a [`Body`].
+    #[derive(Clone, Copy, Debug)]
+    pub struct BodyDataStream<B> {
+        #[pin]
+        body: B,
+    }
+}
+
+impl<B> BodyDataStream<B> {
+    /// Create a new `BodyDataStream`
+    pub fn new(body: B) -> Self {
+        Self { body }
+    }
+}
+
+impl<B> Stream for BodyDataStream<B>
+where
+    B: Body,
+{
+    type Item = Result<B::Data, B::Error>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        loop {
+            return match ready!(self.as_mut().project().body.poll_frame(cx)) {
+                Some(Ok(frame)) => match frame.into_data() {
+                    Ok(bytes) => Poll::Ready(Some(Ok(bytes))),
+                    Err(_) => continue,
+                },
+                Some(Err(err)) => Poll::Ready(Some(Err(err))),
+                None => Poll::Ready(None),
+            };
         }
     }
 }

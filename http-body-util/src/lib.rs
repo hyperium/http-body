@@ -24,7 +24,7 @@ pub use self::either::Either;
 pub use self::empty::Empty;
 pub use self::full::Full;
 pub use self::limited::{LengthLimitError, Limited};
-pub use self::stream::{BodyStream, StreamBody};
+pub use self::stream::{BodyDataStream, BodyStream, StreamBody};
 
 /// An extension trait for [`http_body::Body`] adding various combinators and adapters
 pub trait BodyExt: http_body::Body {
@@ -127,6 +127,14 @@ pub trait BodyExt: http_body::Body {
         F: std::future::Future<Output = Option<Result<http::HeaderMap, Self::Error>>>,
     {
         combinators::WithTrailers::new(self, trailers)
+    }
+
+    /// Turn this body into [`BodyDataStream`].
+    fn into_data_stream(self) -> BodyDataStream<Self>
+    where
+        Self: Sized,
+    {
+        BodyDataStream::new(self)
     }
 }
 
