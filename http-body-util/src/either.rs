@@ -147,14 +147,16 @@ pub(crate) mod proj {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::Infallible;
+
     use super::*;
     use crate::{BodyExt, Empty, Full};
 
     #[tokio::test]
     async fn data_left() {
-        let full = Full::new(&b"hello"[..]);
+        let full = Full::<_, Infallible>::new(&b"hello"[..]);
 
-        let mut value: Either<_, Empty<&[u8]>> = Either::Left(full);
+        let mut value: Either<_, Empty<&[u8], Infallible>> = Either::Left(full);
 
         assert_eq!(value.size_hint().exact(), Some(b"hello".len() as u64));
         assert_eq!(
@@ -166,9 +168,9 @@ mod tests {
 
     #[tokio::test]
     async fn data_right() {
-        let full = Full::new(&b"hello!"[..]);
+        let full = Full::<_, Infallible>::new(&b"hello!"[..]);
 
-        let mut value: Either<Empty<&[u8]>, _> = Either::Right(full);
+        let mut value: Either<Empty<&[u8], Infallible>, _> = Either::Right(full);
 
         assert_eq!(value.size_hint().exact(), Some(b"hello!".len() as u64));
         assert_eq!(
