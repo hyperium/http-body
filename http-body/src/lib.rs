@@ -207,6 +207,26 @@ impl Body for String {
     }
 }
 
+impl Body for () {
+    type Data = Bytes;
+    type Error = Infallible;
+
+    fn poll_frame(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        Poll::Ready(None)
+    }
+
+    fn is_end_stream(&self) -> bool {
+        true
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        SizeHint::with_exact(0)
+    }
+}
+
 #[cfg(test)]
 fn _assert_bounds() {
     fn can_be_trait_object(_: &dyn Body<Data = std::io::Cursor<Vec<u8>>, Error = std::io::Error>) {}
