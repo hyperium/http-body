@@ -72,6 +72,14 @@ pub trait BodyExt: http_body::Body {
     {
         UnsyncBoxBody::new(self)
     }
+    
+    /// Turn this body into a [`Limited`] body with the given limit.
+    fn limited(self, limit: usize) -> Limited<Self>
+    where
+        Self: Sized,
+    {
+        Limited::new(self, limit)
+    }
 
     /// Turn this body into [`Collected`] body which will collect all the DATA frames
     /// and trailers.
