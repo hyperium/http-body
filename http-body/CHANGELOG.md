@@ -1,3 +1,7 @@
+# 1.0.1 (July 12, 2024)
+
+- Include LICENSE file.
+
 # 1.0.0 (November 15, 2023)
 
 - Update `http` to 1.0.

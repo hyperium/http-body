@@ -7,7 +7,7 @@ name = "http-body"
 #   - README.md
 # - Update CHANGELOG.md.
 # - Create "http-body-x.y.z" git tag.
-version = "1.0.0"
+version = "1.0.1"
 authors = [
   "Carl Lerche <me@carllerche.com>",
   "Lucio Franco <luciofranco14@gmail.com>",
