@@ -38,6 +38,15 @@ pub trait BodyExt: http_body::Body {
         combinators::Frame(self)
     }
 
+    /// Returns future that resolves to next data chunk, if any.
+    fn data(&mut self) -> combinators::Data<'_, Self>
+    where
+        Self: Unpin + Sized,
+    {
+        combinators::Data(self)
+    }
+
+
     /// Maps this body's frame to a different kind.
     fn map_frame<F, B>(self, f: F) -> MapFrame<Self, F>
     where
