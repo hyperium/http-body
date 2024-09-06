@@ -24,7 +24,7 @@ Combinators and adapters for HTTP request or response bodies.
 """
 keywords = ["http"]
 categories = ["web-programming"]
-rust-version = "1.56"
+rust-version = "1.61"
 
 [dependencies]
 bytes = "1"
