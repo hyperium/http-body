@@ -70,6 +70,15 @@ where
         }
     }
 
+    fn poll_progress(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        match self.project() {
+            EitherProj::Left(left) => left.poll_progress(cx).map(|poll| poll.map_err(Into::into)),
+            EitherProj::Right(right) => {
+                right.poll_progress(cx).map(|poll| poll.map_err(Into::into))
+            }
+        }
+    }
+
     fn is_end_stream(&self) -> bool {
         match self {
             Either::Left(left) => left.is_end_stream(),
