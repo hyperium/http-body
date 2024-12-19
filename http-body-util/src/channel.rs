@@ -79,17 +79,17 @@ pub struct Sender<D, E = std::convert::Infallible> {
 
 impl<D, E> Sender<D, E> {
     /// Send a frame on the channel.
-    pub async fn send(&self, frame: Frame<D>) -> Result<(), SendError> {
+    pub async fn send(&mut self, frame: Frame<D>) -> Result<(), SendError> {
         self.tx_frame.send(frame).await.map_err(|_| SendError)
     }
 
     /// Send data on data channel.
-    pub async fn send_data(&self, buf: D) -> Result<(), SendError> {
+    pub async fn send_data(&mut self, buf: D) -> Result<(), SendError> {
         self.send(Frame::data(buf)).await
     }
 
     /// Send trailers on trailers channel.
-    pub async fn send_trailers(&self, trailers: HeaderMap) -> Result<(), SendError> {
+    pub async fn send_trailers(&mut self, trailers: HeaderMap) -> Result<(), SendError> {
         self.send(Frame::trailers(trailers)).await
     }
 
@@ -132,7 +132,7 @@ mod tests {
 
     #[tokio::test]
     async fn works() {
-        let (tx, body) = Channel::<Bytes>::new(1024);
+        let (mut tx, body) = Channel::<Bytes>::new(1024);
 
         tokio::spawn(async move {
             tx.send_data(Bytes::from("Hel")).await.unwrap();
