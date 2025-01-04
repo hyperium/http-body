@@ -28,10 +28,11 @@ rust-version = "1.56"
 
 [dependencies]
 bytes = "1"
-futures-util = { version = "0.3", default-features = false }
+futures-core = { version = "0.3", default-features = false }
 http = "1"
 http-body = { version = "1", path = "../http-body" }
 pin-project-lite = "0.2"
 
 [dev-dependencies]
+futures-util = { version = "0.3", default-features = false }
 tokio = { version = "1", features = ["macros", "rt", "sync", "rt-multi-thread"] }
