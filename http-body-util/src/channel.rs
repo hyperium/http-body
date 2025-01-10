@@ -48,13 +48,14 @@ where
         let this = self.project();
 
         match this.rx_frame.poll_recv(cx) {
-            Poll::Ready(frame) => return Poll::Ready(frame.map(Ok)),
-            Poll::Pending => {}
+            Poll::Ready(frame @ Some(_)) => return Poll::Ready(frame.map(Ok)),
+            Poll::Ready(None) | Poll::Pending => {}
         }
 
         use core::future::Future;
         match this.rx_error.poll(cx) {
-            Poll::Ready(err) => return Poll::Ready(err.ok().map(Err)),
+            Poll::Ready(Ok(error)) => return Poll::Ready(Some(Err(error))),
+            Poll::Ready(Err(_)) => return Poll::Ready(None),
             Poll::Pending => {}
         }
 
@@ -131,13 +132,54 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn works() {
+    async fn empty() {
+        let (tx, body) = Channel::<Bytes>::new(1024);
+        drop(tx);
+
+        let collected = body.collect().await.unwrap();
+        assert!(collected.trailers().is_none());
+        assert!(collected.to_bytes().is_empty());
+    }
+
+    #[tokio::test]
+    async fn can_send_data() {
         let (mut tx, body) = Channel::<Bytes>::new(1024);
 
         tokio::spawn(async move {
             tx.send_data(Bytes::from("Hel")).await.unwrap();
             tx.send_data(Bytes::from("lo!")).await.unwrap();
+        });
 
+        let collected = body.collect().await.unwrap();
+        assert!(collected.trailers().is_none());
+        assert_eq!(collected.to_bytes(), "Hello!");
+    }
+
+    #[tokio::test]
+    async fn can_send_trailers() {
+        let (mut tx, body) = Channel::<Bytes>::new(1024);
+
+        tokio::spawn(async move {
+            let mut trailers = HeaderMap::new();
+            trailers.insert(
+                HeaderName::from_static("foo"),
+                HeaderValue::from_static("bar"),
+            );
+            tx.send_trailers(trailers).await.unwrap();
+        });
+
+        let collected = body.collect().await.unwrap();
+        assert_eq!(collected.trailers().unwrap()["foo"], "bar");
+        assert!(collected.to_bytes().is_empty());
+    }
+
+    #[tokio::test]
+    async fn can_send_both_data_and_trailers() {
+        let (mut tx, body) = Channel::<Bytes>::new(1024);
+
+        tokio::spawn(async move {
+            tx.send_data(Bytes::from("Hel")).await.unwrap();
+            tx.send_data(Bytes::from("lo!")).await.unwrap();
             let mut trailers = HeaderMap::new();
             trailers.insert(
                 HeaderName::from_static("foo"),
@@ -149,5 +191,44 @@ mod tests {
         let collected = body.collect().await.unwrap();
         assert_eq!(collected.trailers().unwrap()["foo"], "bar");
         assert_eq!(collected.to_bytes(), "Hello!");
+    }
+
+    /// A stand-in for an error type, for unit tests.
+    type Error = &'static str;
+    /// An example error message.
+    const MSG: Error = "oh no";
+
+    #[tokio::test]
+    async fn aborts_before_trailers() {
+        let (mut tx, body) = Channel::<Bytes, Error>::new(1024);
+
+        tokio::spawn(async move {
+            tx.send_data(Bytes::from("Hel")).await.unwrap();
+            tx.send_data(Bytes::from("lo!")).await.unwrap();
+            tx.abort(MSG);
+        });
+
+        let err = body.collect().await.unwrap_err();
+        assert_eq!(err, MSG);
+    }
+
+    #[tokio::test]
+    async fn aborts_after_trailers() {
+        let (mut tx, body) = Channel::<Bytes, Error>::new(1024);
+
+        tokio::spawn(async move {
+            tx.send_data(Bytes::from("Hel")).await.unwrap();
+            tx.send_data(Bytes::from("lo!")).await.unwrap();
+            let mut trailers = HeaderMap::new();
+            trailers.insert(
+                HeaderName::from_static("foo"),
+                HeaderValue::from_static("bar"),
+            );
+            tx.send_trailers(trailers).await.unwrap();
+            tx.abort(MSG);
+        });
+
+        let err = body.collect().await.unwrap_err();
+        assert_eq!(err, MSG);
     }
 }
