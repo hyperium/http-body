@@ -43,7 +43,7 @@ pub trait Body {
     type Error;
 
     #[allow(clippy::type_complexity)]
-    /// Attempt to pull out the next data buffer of this stream.
+    /// Attempt to pull out the next frame of this stream.
     ///
     /// # Return value
     ///
