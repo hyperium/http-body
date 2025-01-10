@@ -142,6 +142,19 @@ pub trait BodyExt: http_body::Body {
     {
         BodyDataStream::new(self)
     }
+
+    /// Creates a "fused" body.
+    ///
+    /// This [`Body`][http_body::Body] yields [`Poll::Ready(None)`] forever after the underlying
+    /// body yields [`Poll::Ready(None)`], or an error [`Poll::Ready(Some(Err(_)))`], once.
+    ///
+    /// See [`Fuse<B>`][combinators::Fuse] for more information.
+    fn fuse(self) -> combinators::Fuse<Self>
+    where
+        Self: Sized,
+    {
+        combinators::Fuse::new(self)
+    }
 }
 
 impl<T: ?Sized> BodyExt for T where T: http_body::Body {}
