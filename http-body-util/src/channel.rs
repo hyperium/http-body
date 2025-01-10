@@ -114,6 +114,65 @@ impl<D, E> Sender<D, E> {
             .map_err(tokio::sync::mpsc::error::TrySendError::into_inner)
     }
 
+    /// Returns the current capacity of the channel.
+    ///
+    /// The capacity goes down when [`Frame<T>`]s are sent. The capacity goes up when these frames
+    /// are received by the corresponding [`Channel<D, E>`]. This is distinct from
+    /// [`max_capacity()`][Self::max_capacity], which always returns the buffer capacity initially
+    /// specified when [`Channel::new()`][Channel::new] was called.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bytes::Bytes;
+    /// use http_body_util::{BodyExt, channel::Channel};
+    /// use std::convert::Infallible;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///    let (mut tx, mut body) = Channel::<Bytes, Infallible>::new(4);
+    ///    assert_eq!(tx.capacity(), 4);
+    ///
+    ///    // Sending a value decreases the available capacity.
+    ///    tx.send_data(Bytes::from("Hel")).await.unwrap();
+    ///    assert_eq!(tx.capacity(), 3);
+    ///
+    ///    // Reading a value increases the available capacity.
+    ///    let _ = body.frame().await;
+    ///    assert_eq!(tx.capacity(), 4);
+    /// }
+    /// ```
+    pub fn capacity(&mut self) -> usize {
+        self.tx_frame.capacity()
+    }
+
+    /// Returns the maximum capacity of the channel.
+    ///
+    /// This function always returns the buffer capacity initially specified when
+    /// [`Channel::new()`][Channel::new] was called. This is distinct from
+    /// [`capacity()`][Self::capacity], which returns the currently available capacity.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bytes::Bytes;
+    /// use http_body_util::{BodyExt, channel::Channel};
+    /// use std::convert::Infallible;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///    let (mut tx, mut body) = Channel::<Bytes, Infallible>::new(4);
+    ///    assert_eq!(tx.max_capacity(), 4);
+    ///
+    ///    // Sending a value buffers it, but does not affect the maximum capacity reported.
+    ///    tx.send_data(Bytes::from("Hel")).await.unwrap();
+    ///    assert_eq!(tx.max_capacity(), 4);
+    /// }
+    /// ```
+    pub fn max_capacity(&mut self) -> usize {
+        self.tx_frame.max_capacity()
+    }
+
     /// Aborts the body in an abnormal fashion.
     pub fn abort(self, error: E) {
         self.tx_error.send(error).ok();
