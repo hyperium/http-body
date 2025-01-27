@@ -49,17 +49,21 @@ pub trait Body {
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>>;
 
-    /// Returns `true` when the end of stream has been reached.
+    /// A hint that may return `true` when the end of stream has been reached.
     ///
     /// An end of stream means that `poll_frame` will return `None`.
     ///
     /// A return value of `false` **does not** guarantee that a value will be
-    /// returned from `poll_frame`.
+    /// returned from `poll_frame`. Combinators or other implementations may
+    /// not be able to know the end of stream has been reached for this hint.
+    ///
+    /// Returning `true` allows consumers of this body to optimize, such as not
+    /// calling `poll_frame` again.
     fn is_end_stream(&self) -> bool {
         false
     }
 
-    /// Returns the bounds on the remaining length of the stream.
+    /// A hint that returns the bounds on the remaining length of the stream.
     ///
     /// When the **exact** remaining length of the stream is known, the upper bound will be set and
     /// will equal the lower bound.
