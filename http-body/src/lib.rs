@@ -43,7 +43,22 @@ pub trait Body {
     type Error;
 
     #[allow(clippy::type_complexity)]
-    /// Attempt to pull out the next data buffer of this stream.
+    /// Attempt to pull out the next frame of this stream.
+    ///
+    /// # Return value
+    ///
+    /// This function returns:
+    ///
+    /// - [`Poll::Pending`] if the next frame is not ready yet.
+    /// - [`Poll::Ready(Some(Ok(frame)))`] when the next frame is available.
+    /// - [`Poll::Ready(Some(Err(error)))`] when an error has been reached.
+    /// - [`Poll::Ready(None)`] means that all of the frames in this stream have been returned, and
+    ///   that the end of the stream has been reached.
+    ///
+    /// If [`Poll::Ready(Some(Err(error)))`] is returned, this body should be discarded.
+    ///
+    /// Once the end of the stream is reached, implementations should continue to return
+    /// [`Poll::Ready(None)`].
     fn poll_frame(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
