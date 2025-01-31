@@ -110,7 +110,7 @@ mod tests {
     #[tokio::test]
     async fn read_for_body_under_limit_returns_data() {
         const DATA: &[u8] = b"testing";
-        let inner = Full::new(Bytes::from(DATA));
+        let inner = Full::<_, Infallible>::new(Bytes::from(DATA));
         let body = &mut Limited::new(inner, 8);
 
         let mut hint = SizeHint::new();
@@ -128,7 +128,7 @@ mod tests {
     #[tokio::test]
     async fn read_for_body_over_limit_returns_error() {
         const DATA: &[u8] = b"testing a string that is too long";
-        let inner = Full::new(Bytes::from(DATA));
+        let inner = Full::<_, Infallible>::new(Bytes::from(DATA));
         let body = &mut Limited::new(inner, 8);
 
         let mut hint = SizeHint::new();

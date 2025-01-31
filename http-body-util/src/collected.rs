@@ -104,7 +104,7 @@ mod tests {
 
     #[tokio::test]
     async fn full_body() {
-        let body = Full::new(&b"hello"[..]);
+        let body = Full::<_, Infallible>::new(&b"hello"[..]);
 
         let buffered = body.collect().await.unwrap();
 
@@ -126,6 +126,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(unused_must_use)]
     async fn delayed_segments() {
         let one = stream::once(async { Ok::<_, Infallible>(Frame::data(&b"hello "[..])) });
         let two = stream::once(async {
