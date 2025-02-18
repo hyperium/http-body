@@ -94,6 +94,26 @@ impl<D, E> Sender<D, E> {
         self.send(Frame::trailers(trailers)).await
     }
 
+    /// Attempts to send a frame on this channel.
+    ///
+    /// This function returns the unsent frame back as an `Err(_)` if the channel could not
+    /// (currently) accept another frame.
+    ///
+    /// # Note
+    ///
+    /// This is mostly useful for when trying to send a frame from outside of an asynchronous
+    /// context. If in an async context, prefer [`Sender::send_data()`] instead.
+    pub fn try_send(&mut self, frame: Frame<D>) -> Result<(), Frame<D>> {
+        let Self {
+            tx_frame,
+            tx_error: _,
+        } = self;
+
+        tx_frame
+            .try_send(frame)
+            .map_err(tokio::sync::mpsc::error::TrySendError::into_inner)
+    }
+
     /// Aborts the body in an abnormal fashion.
     pub fn abort(self, error: E) {
         self.tx_error.send(error).ok();
@@ -191,6 +211,52 @@ mod tests {
         let collected = body.collect().await.unwrap();
         assert_eq!(collected.trailers().unwrap()["foo"], "bar");
         assert_eq!(collected.to_bytes(), "Hello!");
+    }
+
+    #[tokio::test]
+    async fn try_send_works() {
+        let (mut tx, mut body) = Channel::<Bytes>::new(2);
+
+        // Send two messages, filling the channel's buffer.
+        tx.try_send(Frame::data(Bytes::from("one")))
+            .expect("can send one message");
+        tx.try_send(Frame::data(Bytes::from("two")))
+            .expect("can send two messages");
+
+        // Sending a value to a full channel should return it back to us.
+        match tx.try_send(Frame::data(Bytes::from("three"))) {
+            Err(frame) => assert_eq!(frame.into_data().unwrap(), "three"),
+            Ok(()) => panic!("synchronously sending a value to a full channel should fail"),
+        };
+
+        // Read the messages out of the body.
+        assert_eq!(
+            body.frame()
+                .await
+                .expect("yields result")
+                .expect("yields frame")
+                .into_data()
+                .expect("yields data"),
+            "one"
+        );
+        assert_eq!(
+            body.frame()
+                .await
+                .expect("yields result")
+                .expect("yields frame")
+                .into_data()
+                .expect("yields data"),
+            "two"
+        );
+
+        // Drop the body.
+        drop(body);
+
+        // Sending a value to a closed channel should return it back to us.
+        match tx.try_send(Frame::data(Bytes::from("closed"))) {
+            Err(frame) => assert_eq!(frame.into_data().unwrap(), "closed"),
+            Ok(()) => panic!("synchronously sending a value to a closed channel should fail"),
+        };
     }
 
     /// A stand-in for an error type, for unit tests.
