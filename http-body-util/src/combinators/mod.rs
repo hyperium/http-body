@@ -6,6 +6,7 @@ mod frame;
 mod map_err;
 mod map_frame;
 mod with_trailers;
+mod data;
 
 pub use self::{
     box_body::{BoxBody, UnsyncBoxBody},
@@ -14,4 +15,5 @@ pub use self::{
     map_err::MapErr,
     map_frame::MapFrame,
     with_trailers::WithTrailers,
+    data::Data,
 };
