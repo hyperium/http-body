@@ -13,6 +13,7 @@ mod either;
 mod empty;
 mod full;
 mod limited;
+mod response_ext;
 mod stream;
 
 #[cfg(feature = "channel")]
@@ -22,15 +23,15 @@ mod util;
 
 use self::combinators::{BoxBody, MapErr, MapFrame, UnsyncBoxBody};
 
+#[cfg(feature = "channel")]
+pub use self::channel::Channel;
 pub use self::collected::Collected;
 pub use self::either::Either;
 pub use self::empty::Empty;
 pub use self::full::Full;
 pub use self::limited::{LengthLimitError, Limited};
+pub use self::response_ext::ResponseExt;
 pub use self::stream::{BodyDataStream, BodyStream, StreamBody};
-
-#[cfg(feature = "channel")]
-pub use self::channel::Channel;
 
 /// An extension trait for [`http_body::Body`] adding various combinators and adapters
 pub trait BodyExt: http_body::Body {
