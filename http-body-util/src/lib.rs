@@ -136,6 +136,14 @@ pub trait BodyExt: http_body::Body {
         combinators::WithTrailers::new(self, trailers)
     }
 
+    /// Turn this body into [`BodyStream`].
+    fn into_stream(self) -> BodyStream<Self>
+    where
+        Self: Sized,
+    {
+        BodyStream::new(self)
+    }
+
     /// Turn this body into [`BodyDataStream`].
     fn into_data_stream(self) -> BodyDataStream<Self>
     where
