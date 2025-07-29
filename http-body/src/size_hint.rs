@@ -82,3 +82,17 @@ impl SizeHint {
         self.upper = Some(value);
     }
 }
+
+/// Perfectly adds two `SizeHint'`s
+impl core::ops::Add for SizeHint {
+    type Output = SizeHint;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        SizeHint {
+            lower: self.lower() + rhs.lower(),
+            upper: self
+                .upper()
+                .and_then(|this| rhs.upper().map(|rhs| this + rhs)),
+        }
+    }
+}
