@@ -140,7 +140,7 @@ fn size_hint_addition_proof() {
     let exact_2 = SizeHint::with_exact(2);
 
     // with_exact
-    reciprocal_add_eq!(exact_1, exact_2, to_parts(SizeHint::with_exact(3)));
+    reciprocal_add_eq!(exact_1, exact_2, to_parts(SizeHint::with_exact(1 + 2)));
 
     let some_lhs = SizeHint {
         lower: 4,
