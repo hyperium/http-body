@@ -55,6 +55,15 @@ pub trait BodyExt: http_body::Body {
         MapFrame::new(self, f)
     }
 
+    /// A body that calls a function with a reference to each frame before yielding it.
+    fn inspect_frame<F>(self, f: F) -> combinators::InspectFrame<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(&http_body::Frame<Self::Data>),
+    {
+        combinators::InspectFrame::new(self, f)
+    }
+
     /// Maps this body's error value to a different value.
     fn map_err<F, E>(self, f: F) -> MapErr<Self, F>
     where
@@ -62,6 +71,15 @@ pub trait BodyExt: http_body::Body {
         F: FnMut(Self::Error) -> E,
     {
         MapErr::new(self, f)
+    }
+
+    /// A body that calls a function with a reference to an error before yielding it.
+    fn inspect_err<F>(self, f: F) -> combinators::InspectErr<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(&Self::Error),
+    {
+        combinators::InspectErr::new(self, f)
     }
 
     /// Turn this body into a boxed trait object.
