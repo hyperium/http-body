@@ -154,8 +154,8 @@ pub trait BodyExt: http_body::Body {
 
     /// Creates a "fused" body.
     ///
-    /// This [`Body`][http_body::Body] yields [`Poll::Ready(None)`] forever after the underlying
-    /// body yields [`Poll::Ready(None)`], or an error [`Poll::Ready(Some(Err(_)))`], once.
+    /// This [`Body`][http_body::Body] yields `Poll::Ready(None)` forever after the underlying
+    /// body yields `Poll::Ready(None)`, or an error `Poll::Ready(Some(Err(_)))`, once.
     ///
     /// See [`Fuse<B>`][combinators::Fuse] for more information.
     fn fuse(self) -> combinators::Fuse<Self>

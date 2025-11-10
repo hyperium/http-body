@@ -7,10 +7,10 @@ use http_body::{Body, Frame, SizeHint};
 
 /// A "fused" [`Body`].
 ///
-/// This [`Body`] yields [`Poll::Ready(None)`] forever after the underlying body yields
-/// [`Poll::Ready(None)`], or an error [`Poll::Ready(Some(Err(_)))`], once.
+/// This [`Body`] yields `Poll::Ready(None)` forever after the underlying body yields
+/// `Poll::Ready(None)`, or an error `Poll::Ready(Some(Err(_)))`, once.
 ///
-/// Bodies should ideally continue to return [`Poll::Ready(None)`] indefinitely after the end of
+/// Bodies should ideally continue to return `Poll::Ready(None)` indefinitely after the end of
 /// the stream is reached. [`Fuse<B>`] avoids polling its underlying body `B` further after the
 /// underlying stream as ended, which can be useful for implementation that cannot uphold this
 /// guarantee.
