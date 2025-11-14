@@ -13,7 +13,7 @@ authors = [
   "Lucio Franco <luciofranco14@gmail.com>",
   "Sean McArthur <sean@seanmonstar.com>",
 ]
-edition = "2018"
+edition = "2021"
 readme = "../README.md"
 documentation = "https://docs.rs/http-body"
 repository = "https://github.com/hyperium/http-body"
