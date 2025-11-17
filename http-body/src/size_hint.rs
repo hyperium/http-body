@@ -4,7 +4,7 @@
 ///
 /// * 0 for `lower`
 /// * `None` for `upper`.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SizeHint {
     lower: u64,
     upper: Option<u64>,
@@ -178,7 +178,7 @@ fn size_hint_addition_basic() {
     let exact_l = SizeHint::with_exact(20);
     let exact_r = SizeHint::with_exact(5);
 
-    assert_eq!(Some(25), (exact_l.clone() + exact_r).exact());
+    assert_eq!(Some(25), (exact_l + exact_r).exact());
 
     let inexact_l = SizeHint {
         lower: 25,
@@ -189,12 +189,12 @@ fn size_hint_addition_basic() {
         upper: Some(50),
     };
 
-    let inexact = inexact_l + inexact_r.clone();
+    let inexact = inexact_l + inexact_r;
 
     assert_eq!(inexact.lower(), 35);
     assert_eq!(inexact.upper(), None);
 
-    let exact_inexact = exact_l.clone() + inexact_r.clone();
+    let exact_inexact = exact_l + inexact_r;
 
     assert_eq!(exact_inexact.lower(), 30);
     assert_eq!(exact_inexact.upper(), Some(70));
