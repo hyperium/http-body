@@ -28,6 +28,13 @@ impl<B: Buf> Collected<B> {
         self.trailers.as_ref()
     }
 
+    /// If there is a trailers frame buffered, remove and return it.
+    ///
+    /// Returns `None` if the body contained no trailers.
+    pub fn take_trailers(&mut self) -> Option<HeaderMap> {
+        self.trailers.take()
+    }
+
     /// Aggregate this buffered into a [`Buf`].
     pub fn aggregate(self) -> impl Buf {
         self.bufs
