@@ -128,8 +128,8 @@ fn size_hint_addition_proof() {
     // asserts a + b == b + a == eq
     macro_rules! reciprocal_add_eq {
         ($a:expr, $b:expr, $eq:expr) => {
-            assert_eq!(to_parts(($a.clone() + $b.clone())), $eq);
-            assert_eq!(to_parts(($b.clone() + $a.clone())), $eq);
+            assert_eq!(to_parts($a.clone() + $b.clone()), $eq);
+            assert_eq!(to_parts($b.clone() + $a.clone()), $eq);
         };
     }
 
