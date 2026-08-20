@@ -13,6 +13,7 @@ pub mod combinators;
 mod either;
 mod empty;
 mod full;
+mod future;
 mod limited;
 mod stream;
 
@@ -27,6 +28,7 @@ pub use self::collected::Collected;
 pub use self::either::Either;
 pub use self::empty::Empty;
 pub use self::full::Full;
+pub use self::future::TryFutureBody;
 pub use self::limited::{LengthLimitError, Limited};
 pub use self::stream::{BodyDataStream, BodyStream, StreamBody};
 
