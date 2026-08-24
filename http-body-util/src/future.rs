@@ -17,6 +17,20 @@ pub struct TryFutureBody<F, B> {
     inner: Inner<F, B>,
 }
 
+/// The inner state of a [`TryFutureBody<F, B>`].
+///
+/// A future is polled until it either yields a body, or fails.
+///
+/// ```text
+/// ┌────────┐                                               ┌──────┐
+/// │ Future │ --> `poll_frame()`-+------------------------> │ Body │
+/// └────────┘                    | `Poll::Ready(Ok(body))`  └──────┘
+///     ↑               |         |
+///     |               |         |                          ┌────────┐
+///     +---------------+         +------------------------> │ Failed │
+///      `Poll::Pending`            `Poll::Ready(Err(err))`  └────────┘
+///
+/// ```
 #[derive(Debug)]
 enum Inner<F, B> {
     /// The future is still being polled.
