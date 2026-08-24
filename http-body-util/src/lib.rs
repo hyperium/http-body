@@ -182,6 +182,66 @@ pub trait BodyExt: http_body::Body {
     {
         combinators::Fuse::new(self)
     }
+
+    /// Takes two bodies and creates a new body "chaining" them together.
+    ///
+    /// Similar to [`std::iter::Iterator::chain()`], this method will return a new
+    /// [`Body`][http_body::Body] that emits the contents of the first body, and then emits the
+    /// contents of the second body.
+    ///
+    /// If the first body returns an error, the body will consider itself finished and will not
+    /// poll the second body.
+    ///
+    /// Trailers yielded by the first body are buffered while the second body is polled, and then
+    /// merged with any trailers yielded by the second body via [`http::HeaderMap::extend()`].
+    /// Header values from the second body take precedent in the event of any conflicts.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use bytes::Bytes;
+    /// # use http_body_util::{BodyExt, Full};
+    /// #
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let first = Full::new(Bytes::from("hello "));
+    ///     let second = Full::new(Bytes::from("world!"));
+    ///     let chained = first.chain(second);
+    ///
+    ///     let collected = chained.collect().await.unwrap();
+    ///     assert_eq!(collected.to_bytes(), "hello world!");
+    /// }
+    /// ```
+    ///
+    /// ```
+    /// # use bytes::Bytes;
+    /// # use http::{HeaderMap, HeaderName, HeaderValue};
+    /// # use http_body_util::{BodyExt, Full, Empty};
+    /// #
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let mut trailers = HeaderMap::new();
+    ///     trailers.insert(
+    ///         HeaderName::from_static("name"),
+    ///         HeaderValue::from_static("value"),
+    ///     );
+    ///     let trailers = std::future::ready(Some(Ok(trailers)));
+    ///
+    ///     let first = Full::new(Bytes::from("trailers"));
+    ///     let second = Full::new(Bytes::from(" too!"));
+    ///     let chained = first.with_trailers(trailers).chain(second);
+    ///
+    ///     let collected = chained.collect().await.unwrap();
+    ///     assert_eq!(collected.trailers().unwrap()["name"], "value");
+    ///     assert_eq!(collected.to_bytes(), "trailers too!");
+    /// }
+    /// ```
+    fn chain<B>(self, other: B) -> combinators::Chain<Self, B>
+    where
+        Self: Sized,
+    {
+        combinators::Chain::new(self, other)
+    }
 }
 
 impl<T: ?Sized> BodyExt for T where T: http_body::Body {}
