@@ -194,7 +194,7 @@ pub trait BodyExt: http_body::Body {
     ///
     /// Trailers yielded by the first body are buffered while the second body is polled, and then
     /// merged with any trailers yielded by the second body via [`http::HeaderMap::extend()`].
-    /// Header values from the second body take precedent in the event of any conflicts.
+    /// Header values from the second body take precedence in the event of any conflicts.
     ///
     /// # Examples
     ///
