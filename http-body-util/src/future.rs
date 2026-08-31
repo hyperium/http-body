@@ -1,49 +1,55 @@
 use http_body::{Body, SizeHint};
+use pin_project_lite::pin_project;
 use std::{
     future::Future,
     pin::Pin,
     task::{Context, Poll},
 };
 
-/// A [`Body`] backed by a fallible [`Future`].
-///
-/// This allows an `F`-typed future that will yield either a `B`-typed body, or an error, to be
-/// polled as a body. This is particularly useful when you create a body through an asynchronous
-/// computation of some sort.
-///
-/// For example, sending a body over a oneshot channel or reading its contents from the filesystem.
-#[derive(Debug)]
-pub struct TryFutureBody<F, B> {
-    inner: Inner<F, B>,
+pin_project! {
+    /// A [`Body`] backed by a fallible [`Future`].
+    ///
+    /// This allows an `F`-typed future that will yield either a `B`-typed body, or an error, to be
+    /// polled as a body. This is particularly useful when you create a body through an asynchronous
+    /// computation of some sort.
+    ///
+    /// For example, sending a body over a oneshot channel or reading its contents from the filesystem.
+    #[project = TryFutureBodyProj]
+    pub struct TryFutureBody<F, B> {
+        #[pin]
+        inner: Inner<F, B>,
+    }
 }
 
-/// The inner state of a [`TryFutureBody<F, B>`].
-///
-/// A future is polled until it either yields a body, or fails.
-///
-/// ```text
-/// ┌────────┐                                               ┌──────┐
-/// │ Future │ --> `poll_frame()`-+------------------------> │ Body │
-/// └────────┘                    | `Poll::Ready(Ok(body))`  └──────┘
-///     ↑               |         |
-///     |               |         |                          ┌────────┐
-///     +---------------+         +------------------------> │ Failed │
-///      `Poll::Pending`            `Poll::Ready(Err(err))`  └────────┘
-///
-/// ```
-#[derive(Debug)]
-enum Inner<F, B> {
-    /// The future is still being polled.
+pin_project! {
+    /// The inner state of a [`TryFutureBody<F, B>`].
     ///
-    /// When the body is in this state, the inner future has not yet resolved. When this body is
-    /// polled, this inner future will be polled.
-    Future(F),
-    /// The body has been yielded and is being polled.
+    /// A future is polled until it either yields a body, or fails.
     ///
-    /// When the body is in this state, the future has already yielded a body that can now be read.
-    Body(B),
-    /// The future failed to yield a body.
-    Failed,
+    /// ```text
+    /// ┌────────┐                                               ┌──────┐
+    /// │ Future │ --> `poll_frame()`-+------------------------> │ Body │
+    /// └────────┘                    | `Poll::Ready(Ok(body))`  └──────┘
+    ///     ↑               |         |
+    ///     |               |         |                          ┌────────┐
+    ///     +---------------+         +------------------------> │ Failed │
+    ///      `Poll::Pending`            `Poll::Ready(Err(err))`  └────────┘
+    ///
+    /// ```
+    #[project = InnerProj]
+    enum Inner<F, B> {
+        /// The future is still being polled.
+        ///
+        /// When the body is in this state, the inner future has not yet resolved. When this body is
+        /// polled, this inner future will be polled.
+        Future { #[pin] future: F },
+        /// The body has been yielded and is being polled.
+        ///
+        /// When the body is in this state, the future has already yielded a body that can now be read.
+        Body { #[pin] body: B },
+        /// The future failed to yield a body.
+        Failed,
+    }
 }
 
 // === impl TryFutureBody ===
@@ -52,7 +58,7 @@ impl<F, B> TryFutureBody<F, B> {
     /// Wraps the provided future in a [`TryFutureBody<F, B>`].
     pub fn new(future: F) -> Self {
         Self {
-            inner: Inner::Future(future),
+            inner: Inner::Future { future },
         }
     }
 }
@@ -70,16 +76,15 @@ where
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
-        use self::proj::InnerProj;
-
-        match self.as_mut().project() {
+        let TryFutureBodyProj { inner } = self.as_mut().project();
+        match inner.project() {
             InnerProj::Failed => Poll::Ready(None),
-            InnerProj::Body(body) => body.poll_frame(cx),
-            InnerProj::Future(future) => match future.poll(cx) {
+            InnerProj::Body { body } => body.poll_frame(cx),
+            InnerProj::Future { future } => match future.poll(cx) {
                 Poll::Pending => Poll::Pending,
                 Poll::Ready(Ok(body)) => {
                     // We received the body. Put it into place, and then poll ourselves again.
-                    let inner = Inner::Body(body);
+                    let inner = Inner::Body { body };
                     self.set(Self { inner });
                     self.poll_frame(cx)
                 }
@@ -96,8 +101,8 @@ where
     fn is_end_stream(&self) -> bool {
         let Self { inner } = self;
         match inner {
-            Inner::Future(_) => false,
-            Inner::Body(body) => body.is_end_stream(),
+            Inner::Future { .. } => false,
+            Inner::Body { body } => body.is_end_stream(),
             Inner::Failed => true,
         }
     }
@@ -105,79 +110,11 @@ where
     fn size_hint(&self) -> SizeHint {
         let Self { inner } = self;
         match inner {
-            Inner::Future(_) => SizeHint::new(),
-            Inner::Body(body) => body.size_hint(),
+            Inner::Future { .. } => SizeHint::new(),
+            Inner::Body { body } => body.size_hint(),
             Inner::Failed => SizeHint::with_exact(0),
         }
     }
-}
-
-/// Pinning projection for [`TryFutureBody<F, B>`].
-///
-/// Similar to [`crate::either::proj`], this submodule includes code derived from the output
-/// generated by [pin-project-lite].
-mod proj {
-    use super::{Inner, TryFutureBody};
-    use std::{marker::PhantomData, pin::Pin};
-
-    /// A projection of a [pinned][std::pin::Pin] [`Inner<F, B>`].
-    pub(super) enum InnerProj<'pin, F, B>
-    where
-        TryFutureBody<F, B>: 'pin,
-    {
-        Future(Pin<&'pin mut F>),
-        Body(Pin<&'pin mut B>),
-        Failed,
-    }
-
-    // === impl TryFutureBody ===
-
-    impl<F, B> TryFutureBody<F, B> {
-        /// Returns an [`InnerProj<'pin, F, B>`] projection.
-        ///
-        /// This is used internally by [`TryFutureBody<F, B>`] to access its inner future and body.
-        pub(super) fn project<'pin>(self: Pin<&'pin mut Self>) -> InnerProj<'pin, F, B> {
-            // Safety:
-            //
-            // We never move the inner future, or the inner body, out of the mutable reference
-            // we receive from `Pin::get_unchecked_mut()`. We project their "pinnedness" forwards
-            // into a `Pin<&mut F>` or a `Pin<&mut B>`, respectively. If the body is finished,
-            // there is no data that could be moved out.
-            //
-            // - https://doc.rust-lang.org/std/pin/struct.Pin.html#method.get_unchecked_mut
-            //
-            // For more information on structural pinning, see:
-            // <https://doc.rust-lang.org/std/pin/index.html#projections-and-structural-pinning>
-            unsafe {
-                let Self { inner } = self.get_unchecked_mut();
-                match inner {
-                    Inner::Future(fut) => InnerProj::Future(Pin::new_unchecked(fut)),
-                    Inner::Body(body) => InnerProj::Body(Pin::new_unchecked(body)),
-                    Inner::Failed => InnerProj::Failed,
-                }
-            }
-        }
-    }
-
-    #[allow(single_use_lifetimes)]
-    #[allow(unknown_lints)]
-    #[allow(clippy::used_underscore_binding)]
-    #[allow(missing_debug_implementations)]
-    const _: () = {
-        #[allow(non_snake_case)]
-        pub struct __Origin<'__pin, F, B> {
-            __dummy_lifetime: PhantomData<&'__pin ()>,
-            _Future: F,
-            _Body: B,
-        }
-        impl<'__pin, F, B> Unpin for TryFutureBody<F, B> where __Origin<'__pin, F, B>: Unpin {}
-
-        #[allow(unused)]
-        trait MustNotImplDrop {}
-        #[allow(drop_bounds)]
-        impl<T: Drop> MustNotImplDrop for T {}
-        impl<F, B> MustNotImplDrop for TryFutureBody<F, B> {}
-    };
 }
 
 #[cfg(test)]
