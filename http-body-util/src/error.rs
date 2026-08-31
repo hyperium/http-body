@@ -23,6 +23,23 @@ pub struct ErrorBody<D, E> {
 
 impl<D, E> ErrorBody<D, E> {
     /// Returns a new [`ErrorBody`] that will yield the provided error.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bytes::Bytes;
+    /// use http_body_util::{BodyExt, ErrorBody};
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let mut body = ErrorBody::<Bytes, &str>::new("problem");
+    ///     let frame = body.frame().await;
+    ///     assert_eq!(
+    ///         frame.unwrap().unwrap_err(),
+    ///         "problem",
+    ///     );
+    /// }
+    /// ```
     pub fn new(error: E) -> Self {
         Self {
             error: Some(error),
