@@ -80,8 +80,8 @@ where
                         match frame.into_trailers() {
                             // A `TRAILERS` frame was yielded...
                             Ok(trls) => Some(trls),
-                            // A `DATA` frame was yielded. We will return this frame, and continue
-                            // to poll the first body next time around.
+                            // We will return other kinds of frames, and continue to poll the
+                            // first body next time around.
                             Err(frame) => return Poll::Ready(Some(Ok(frame))),
                         }
                     }
@@ -116,8 +116,8 @@ where
                     Some(Ok(frame)) => match frame.into_trailers() {
                         // A `TRAILERS` frame was yielded...
                         Ok(trls) => Some(trls),
-                        // A `DATA` frame was yielded. We will return this frame, and continue
-                        // to poll the second body next time around.
+                        // We will return other kinds of frames, and continue to poll the
+                        // second body next time around.
                         Err(frame) => return Poll::Ready(Some(Ok(frame))),
                     },
                     Some(Err(err)) => {
