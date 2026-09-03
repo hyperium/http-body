@@ -15,6 +15,7 @@ mod empty;
 mod full;
 mod future;
 mod limited;
+mod pending;
 mod stream;
 
 #[cfg(feature = "channel")]
@@ -30,6 +31,7 @@ pub use self::empty::Empty;
 pub use self::full::Full;
 pub use self::future::TryFutureBody;
 pub use self::limited::{LengthLimitError, Limited};
+pub use self::pending::Pending;
 pub use self::stream::{BodyDataStream, BodyStream, StreamBody};
 
 #[cfg(feature = "channel")]
