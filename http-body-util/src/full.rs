@@ -18,6 +18,11 @@ impl<D> Full<D>
 where
     D: Buf,
 {
+    /// Create a new empty `Full`.
+    pub const fn empty() -> Self {
+        Full { data: None }
+    }
+
     /// Create a new `Full`.
     pub fn new(data: D) -> Self {
         let data = if data.has_remaining() {
