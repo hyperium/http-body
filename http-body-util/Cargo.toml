@@ -14,7 +14,7 @@ authors = [
   "Lucio Franco <luciofranco14@gmail.com>",
   "Sean McArthur <sean@seanmonstar.com>",
 ]
-edition = "2018"
+edition = "2021"
 readme = "../README.md"
 documentation = "https://docs.rs/http-body-util"
 repository = "https://github.com/hyperium/http-body"
@@ -26,25 +26,24 @@ keywords = ["http"]
 categories = ["web-programming"]
 rust-version = "1.61"
 
-[features]
-default = []
-channel = ["dep:tokio"]
-full = ["channel"]
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 bytes = "1"
 futures-core = { version = "0.3", default-features = false }
 http = "1"
-http-body = { version = "1", path = "../http-body" }
+http-body = { path = "../http-body", version = "1" }
 pin-project-lite = "0.2"
-
 # optional dependencies
 tokio = { version = "1", features = ["sync"], optional = true }
 
 [dev-dependencies]
 futures-util = { version = "0.3", default-features = false }
-tokio = { version = "1", features = ["macros", "rt", "sync", "rt-multi-thread"] }
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "sync"] }
 
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
+[features]
+default = []
+channel = ["dep:tokio"]
+full = ["channel"]
