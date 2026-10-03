@@ -85,6 +85,16 @@ pub trait Body {
     fn size_hint(&self) -> SizeHint {
         SizeHint::default()
     }
+
+    /// Attempt to clone this body if the concrete type supports it.
+    ///
+    /// The default implementation returns `None` to indicate cloning is not supported.
+    fn try_clone(&self) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        None
+    }
 }
 
 impl<T: Body + Unpin + ?Sized> Body for &mut T {
