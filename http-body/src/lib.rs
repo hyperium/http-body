@@ -226,6 +226,31 @@ impl Body for String {
     }
 }
 
+impl Body for Vec<u8> {
+    type Data = Bytes;
+    type Error = Infallible;
+
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        if !self.is_empty() {
+            let s = std::mem::take(&mut *self);
+            Poll::Ready(Some(Ok(Frame::data(Bytes::from(s)))))
+        } else {
+            Poll::Ready(None)
+        }
+    }
+
+    fn is_end_stream(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        SizeHint::with_exact(self.len() as u64)
+    }
+}
+
 #[cfg(test)]
 fn _assert_bounds() {
     fn can_be_trait_object(_: &dyn Body<Data = std::io::Cursor<Vec<u8>>, Error = std::io::Error>) {}
