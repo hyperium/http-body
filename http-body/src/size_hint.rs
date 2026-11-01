@@ -59,7 +59,7 @@ impl SizeHint {
     /// This function panics if `value` is less than `lower`.
     #[inline]
     pub fn set_upper(&mut self, value: u64) {
-        assert!(value >= self.lower, "`value` is less than than `lower`");
+        assert!(value >= self.lower, "`value` is less than `lower`");
 
         self.upper = Some(value);
     }
