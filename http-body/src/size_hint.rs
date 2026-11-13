@@ -84,6 +84,21 @@ impl SizeHint {
         self.lower = value;
         self.upper = Some(value);
     }
+
+    /// Adds two `SizeHint`s, saturating instead of overflowing.
+    ///
+    /// The lower bound saturates at `u64::MAX`. The upper bound becomes `None`
+    /// (unknown) if the sum does not fit in a `u64`.
+    #[inline]
+    pub fn saturating_add(self, rhs: Self) -> SizeHint {
+        SizeHint {
+            lower: self.lower.saturating_add(rhs.lower),
+            upper: match (self.upper, rhs.upper) {
+                (Some(this), Some(rhs)) => this.checked_add(rhs),
+                _ => None,
+            },
+        }
+    }
 }
 
 /// Perfectly adds two `SizeHint'`s
@@ -207,4 +222,41 @@ fn size_hint_addition_basic() {
 
     assert_eq!(inexact_exact.lower(), 30);
     assert_eq!(inexact_exact.upper(), Some(70));
+}
+
+#[test]
+fn size_hint_saturating_add() {
+    // matches `+` when nothing overflows
+    let some = SizeHint {
+        lower: 4,
+        upper: Some(8),
+    };
+    let none = SizeHint {
+        lower: 16,
+        upper: None,
+    };
+    for (a, b) in [(some, some), (some, none), (none, some), (none, none)] {
+        let saturated = a.saturating_add(b);
+        let added = a + b;
+        assert_eq!(saturated.lower(), added.lower());
+        assert_eq!(saturated.upper(), added.upper());
+    }
+
+    // saturates instead of overflowing
+    let max = SizeHint::with_exact(u64::MAX);
+    let one = SizeHint::with_exact(1);
+    let saturated = max.saturating_add(one);
+    assert_eq!(saturated.lower(), u64::MAX);
+    assert_eq!(saturated.upper(), None);
+
+    let saturated = one.saturating_add(max);
+    assert_eq!(saturated.lower(), u64::MAX);
+    assert_eq!(saturated.upper(), None);
+
+    // an upper bound that still fits is kept
+    let half = SizeHint {
+        lower: 0,
+        upper: Some(u64::MAX / 2),
+    };
+    assert_eq!(half.saturating_add(half).upper(), Some(u64::MAX / 2 * 2));
 }
